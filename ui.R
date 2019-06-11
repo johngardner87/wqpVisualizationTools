@@ -14,13 +14,18 @@ fluidPage(
   
   titlePanel("Water Quality Portal"),
   
+  # Map Output
+  leafletOutput(outputId = "wqpMap"),
+  
   selectInput(inputId = "hucInput",
               label = "HUC Level",
-              choices = c(2, 4, 8, 10, 12)),
+              choices = c(2, 4, 6, 8, 10, 12)),
   
-  # Map Output
-  leafletOutput(outputId = "wqpMap")
-  
+  selectInput(inputId = "constInput",
+              label = "Constituent",
+              choices = c("Chlorophyll" = "chlorophyll", "Dissolved Oxygen Concentration (DOC)" = "doc", "Turbidity (secchi)" = "secchi", "Total Suspended Solids (tss)" = "tss"),
+              multiple = T,
+              selected = "chlorophyll")
   # fluidRow(
   #   
   #   column(4,

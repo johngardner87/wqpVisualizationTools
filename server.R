@@ -20,29 +20,38 @@ function(input, output, session) {
   
   # tmap_mode("view")
   
+  # counts <- st_join(measByLocGeoms, bounds) %>% 
+  #   count(NAME)
+  # st_geometry(counts) <- NULL
+  # 
+  # bounds <- left_join(bounds, counts, by="NAME") %>% 
+  #   plyr::rename(c("n" = "measCount"))
+  # 
+  # pal <- colorNumeric("Blues", domain=bounds$measCount)
+  
   output$wqpMap <- renderLeaflet({
+    
+    # Bounds fit continental US
+    leaflet() %>% addTiles() %>% fitBounds(-125, 25, -70, 50)
+    
+    # map <- tm_shape(bounds) + tm_polygons("MAP_COLORS")
+    # tmap_leaflet(map)
+      
+  })
+  
+  observe({
     hucLevel <- input$hucInput
     
-    bounds <- paste("WBDHU", hucLevel, ".shp", sep = "") %>% 
+    bounds <- paste("WBDHU", hucLevel, ".gpkg", sep = "") %>% 
       paste("Datasets/WBD_Simplified/", ., sep="") %>% 
       st_read()
     
-    # counts <- st_join(measByLocGeoms, bounds) %>% 
-    #   count(NAME)
-    # st_geometry(counts) <- NULL
-    # 
-    # bounds <- left_join(bounds, counts, by="NAME") %>% 
-    #   plyr::rename(c("n" = "measCount"))
-    # 
-    # pal <- colorNumeric("Blues", domain=bounds$measCount)
-    
-    bounds %>%
-      leaflet(data = bounds) %>%
-      addTiles() %>%
+    leafletProxy("wqpMap", data = bounds) %>%
+      clearShapes() %>%
       addPolygons(fillColor = topo.colors(10), #pal
-                  stroke=FALSE,
-                  highlight=highlightOptions(
-                    weight=3,
+                  stroke = FALSE,
+                  highlight = highlightOptions(
+                    weight=7,
                     color = "#666",
                     fillOpacity = 0.7,
                     bringToFront = TRUE),
@@ -50,10 +59,6 @@ function(input, output, session) {
                   labelOptions = labelOptions(
                     textsize = "15px"
                   )
-                  ) 
-    
-    # map <- tm_shape(bounds) + tm_polygons("MAP_COLORS")
-    # tmap_leaflet(map)
-      
+      )
   })
 }
