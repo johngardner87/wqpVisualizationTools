@@ -49,4 +49,5 @@ wqpJoin <- function(dir, constituents, shape = FALSE) {
 }
 
 directory = "~/Documents/School/Duke/Summer 2019/Data+/"
-wqpJoin(directory, "tss", T)
+wqpJoin(directory, "doc", T)
+wqpJoin(directory, "secchi", T)
