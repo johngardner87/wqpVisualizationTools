@@ -20,15 +20,6 @@ function(input, output, session) {
   
   # tmap_mode("view")
   
-  # counts <- st_join(measByLocGeoms, bounds) %>% 
-  #   count(NAME)
-  # st_geometry(counts) <- NULL
-  # 
-  # bounds <- left_join(bounds, counts, by="NAME") %>% 
-  #   plyr::rename(c("n" = "measCount"))
-  # 
-  # pal <- colorNumeric("Blues", domain=bounds$measCount)
-  
   output$wqpMap <- renderLeaflet({
     
     # Bounds fit continental US
@@ -41,23 +32,29 @@ function(input, output, session) {
   
   observe({
     hucLevel <- input$hucInput
+    constituents <- input$constInput
     
-    bounds <- paste("WBDHU", hucLevel, ".gpkg", sep = "") %>% 
+    boundaries <- paste("WBDHU", hucLevel, "Counts", ".gpkg", sep = "") %>% 
       paste("Datasets/WBD_Simplified/", ., sep="") %>% 
       st_read()
     
-    leafletProxy("wqpMap", data = bounds) %>%
+    bins <- c(0, 1000, 3000, 6000, 20000, 100000, Inf)
+    # pal <- colorBin("YlOrRd", domain=boundaries$chlorophyllMeasCount, bins = bins)
+    pal <- colorBin("PuBu", domain=boundaries$chlorophyllMeasCount, bins = bins)
+    
+    leafletProxy("wqpMap", data = boundaries) %>%
       clearShapes() %>%
-      addPolygons(fillColor = topo.colors(10), #pal
+      addPolygons(fillColor = ~pal(chlorophyllMeasCount), #topo.colors(10)
                   stroke = FALSE,
+                  fillOpacity = 0.6,
                   highlight = highlightOptions(
-                    weight=7,
+                    weight=2,
                     color = "#666",
-                    fillOpacity = 0.7,
+                    fillOpacity = 1,
                     bringToFront = TRUE),
-                  label = bounds$NAME,
+                  label = paste(boundaries$NAME, ": ", boundaries$chlorophyllMeasCount, " measurements", sep=""),
                   labelOptions = labelOptions(
-                    textsize = "15px"
+                    textsize = "12px"
                   )
       )
   })
