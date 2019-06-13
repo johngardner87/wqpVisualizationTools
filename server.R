@@ -96,7 +96,7 @@ function(input, output, session) {
     observeEvent(input$wqpMap_shape_click, {
       
       event <- input$wqpMap_shape_click
-      if (event$id != hucSelected) {
+      if (event$id != paste(hucSelected, "Selected", sep="")) {
         oldHuc <- hucSelected
         hucSelected <<- event$id
         selectedHucBound <- boundaries %>% 
@@ -132,8 +132,9 @@ function(input, output, session) {
         }
         print(class(event$id))
         print(paste("you've selected: ", event$id, sep=""))
+      } else {
+        leafletProxy("wqpMap") %>% removeShape(event$id)
       }
     })
   })
-  
 }
