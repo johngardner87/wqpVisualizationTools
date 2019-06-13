@@ -15,9 +15,9 @@ fluidPage(
   # titlePanel("Water Quality Portal"),
   
   # Map Output
-  leafletOutput(outputId = "wqpMap", height = 800),
+  leafletOutput(outputId = "wqpMap", height = 600),
   
-  absolutePanel(id = "Inputs", fixed = TRUE, draggable = TRUE, top = 60, left = "auto", right = 20, bottom = "auto",
+  absolutePanel(id = "Inputs", fixed = TRUE, draggable = TRUE, top = 300, left = "auto", right = 40, bottom = "auto",
                 width = 200, height = "auto", class = "pan",
                 
                 h2("Water Quality Portal"),
@@ -32,4 +32,8 @@ fluidPage(
                             multiple = F,
                             selected = "chlorophyll")
   )
+  
+  # conditionalPanel(condition = "output.show == 'show'",
+  #   leafletOutput(outputId = "testMap")
+  # )
 )
