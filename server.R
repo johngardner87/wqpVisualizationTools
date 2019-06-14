@@ -14,16 +14,12 @@ library(tmap)
 setwd("~/Documents/School/Duke/Summer 2019/Data+/")
 function(input, output, session) {
   
-  # tmap_mode("view")
-  
   output$wqpMap <- renderLeaflet({
-    
     # Bounds fit continental US
     leaflet() %>% addProviderTiles(providers$Esri.WorldGrayCanvas) %>% fitBounds(-100, 25, -75, 55)
-    
-    # map <- tm_shape(bounds) + tm_polygons("MAP_COLORS")
-    # tmap_leaflet(map)
   })
+  
+  output$select <- reactive({F})
   
   palette = "Blues" #Any pallette, I like YlOrRd or Blues
   
@@ -103,8 +99,8 @@ function(input, output, session) {
           filter(.data[[hucColumn]] == hucSelected)
         
         selectedPoly <- leafletProxy("wqpMap", data=selectedHucBound) %>%
-          # {if (hucSelected != -1) {removeShape(as.character(hucSelected))}} %>%
           removeShape(paste(oldHuc, "Selected", sep=""))
+        
         if(constituent == "All") {
           selectedPoly %>%
             addPolygons(layerId = paste(selectedHucBound[[hucColumn]], "Selected", sep=""),
@@ -112,7 +108,8 @@ function(input, output, session) {
                         color = "red",
                         weight = 3,
                         opacity = 1,
-                        label = paste(selectedHucBound$NAME, ": ", selectedHucBound$AllMeasCount, " total measurements", sep=""),
+                        label = paste(selectedHucBound$NAME, ": ", selectedHucBound$AllMeasCount, " total measurements",
+                                      sep=""),
                         labelOptions = labelOptions(
                           textsize = "12px"
                         )
@@ -124,7 +121,8 @@ function(input, output, session) {
                         color = "red",
                         weight = 3,
                         opacity = 1,
-                        label = paste(selectedHucBound$NAME, ": ", selectedHucBound[[constCol]], " ", constituent," measurements", sep=""),
+                        label = paste(selectedHucBound$NAME, ": ",
+                                      selectedHucBound[[constCol]], " ", constituent," measurements", sep=""),
                         labelOptions = labelOptions(
                           textsize = "12px"
                         )
@@ -132,9 +130,17 @@ function(input, output, session) {
         }
         print(class(event$id))
         print(paste("you've selected: ", event$id, sep=""))
+        output$select <- reactive({T})
+        # # Side-map with flowlines
+        # 
+        # output$miniFlowlines <- renderLeaflet({
+        #   leaflet()
+        # })
       } else {
         leafletProxy("wqpMap") %>% removeShape(event$id)
+        output$select <- reactive({F})
       }
     })
   })
+  outputOptions(output, "select", suspendWhenHidden = FALSE)
 }
