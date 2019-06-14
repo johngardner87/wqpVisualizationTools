@@ -1,0 +1,20 @@
+.outer {
+  position: fixed;
+  /* top: 41px; */
+  top:0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+#Inputs {
+  /* Appearance */
+  color: white;
+  background-color: #001A57;
+  padding: 0px 20px 20px 20px;
+  opacity: 0.9;
+  border-radius: 20px;
+  /*cursor: move;*/
+}
