@@ -25,6 +25,8 @@ function(input, output, session) {
   
   observe({
     hucLevel <- input$hucInput
+    # hucLevelUp <- as.numeric(hucLevel) - 2
+    hucLevelUp <- 2
     hucColumn <- paste("HUC", hucLevel, sep="")
     constituent <- input$constInput
     constCol <- paste(constituent, "MeasCount", sep="")
@@ -33,7 +35,29 @@ function(input, output, session) {
       paste("Datasets/WBD_Simplified/", ., sep="") %>% 
       st_read()
     
+    if (hucLevel > 2) {
+      upperBoundaries <- paste("WBDHU", hucLevelUp, "Counts", ".gpkg", sep = "") %>% 
+        paste("Datasets/WBD_Simplified/", ., sep="") %>% 
+        st_read()
+    }
+    
     bins <- c(0, 10, 50, 1000, 3000, 6000, 20000, 100000, Inf)
+    
+    hucMap <- leafletProxy("wqpMap", data = boundaries) %>% 
+      clearShapes() %>% 
+      addMapPane("larger", zIndex = 440) %>% 
+      addMapPane("main", zIndex = 420) %>% 
+      addMapPane("selections", zIndex = 430)
+    
+    if(hucLevel > 2) {
+      hucMap %>% 
+        addPolylines(data = upperBoundaries,
+                    fillOpacity = 0,
+                    weight = 3,
+                    color = "gray",
+                    options = pathOptions(pane = "larger")
+        )
+    }
     
     if (constituent == "All") {
       cols <- c("chlorophyllMeasCount", "docMeasCount", "secchiMeasCount", "tssMeasCount")
@@ -41,15 +65,14 @@ function(input, output, session) {
       boundaries <- mutate(boundaries, AllMeasCount = allCounts)
       pal <- colorBin(palette, domain=allCounts, bins=bins)
       
-      leafletProxy("wqpMap", data = boundaries) %>%
-        clearShapes() %>%
+      hucMap %>%
         addPolygons(fillColor = ~pal(allCounts), #topo.colors(10)
                     color = "black",
                     weight = 1,
                     opacity = 1,
                     fillOpacity = 0.7,
                     highlight = highlightOptions(
-                      weight = 5,
+                      weight = 2,
                       color = "black",
                       fillOpacity = 1,
                       bringToFront = TRUE,
@@ -60,20 +83,20 @@ function(input, output, session) {
                     
                     labelOptions = labelOptions(
                       textsize = "12px"
-                    )
+                    ),
+                    options = pathOptions(pane = "main")
         )
     } else {
       pal <- colorBin(palette, domain=boundaries[[constCol]], bins=bins)
       
-      leafletProxy("wqpMap", data = boundaries) %>%
-        clearShapes() %>%
+      hucMap %>%
         addPolygons(fillColor = ~pal(boundaries[[constCol]]), #topo.colors(10)
                     color = "black",
                     weight = 1,
                     opacity = 1,
                     fillOpacity = 0.7,
                     highlight = highlightOptions(
-                      weight = 5,
+                      weight = 2,
                       color = "black",
                       fillOpacity = 1,
                       bringToFront = TRUE,
@@ -84,7 +107,8 @@ function(input, output, session) {
                     
                     labelOptions = labelOptions(
                       textsize = "12px"
-                    )
+                    ),
+                    options = pathOptions(pane = "main")
         )
     }
     
@@ -112,7 +136,8 @@ function(input, output, session) {
                                       sep=""),
                         labelOptions = labelOptions(
                           textsize = "12px"
-                        )
+                        ),
+                        options = pathOptions(pane = "selections")
             )
         } else {
           selectedPoly %>%
@@ -125,7 +150,8 @@ function(input, output, session) {
                                       selectedHucBound[[constCol]], " ", constituent," measurements", sep=""),
                         labelOptions = labelOptions(
                           textsize = "12px"
-                        )
+                        ),
+                        options = pathOptions(pane = "selections")
             )
         }
         print(class(event$id))
