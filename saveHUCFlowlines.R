@@ -2,7 +2,6 @@ library(tidyverse)
 library(sf)           # For geographical information data (shapes, boundaries, flowlines)
 library(nhdplusTools) # For accessing National Hydrography Dataset w/ flowline information
 
-
 #' Slice flowline data by HUC boundary ------------------------------------
 #'
 #' Separates NHD flowline data into HUC boundaries, saves as .RDS
@@ -20,10 +19,10 @@ saveHUCFlowlines <- function(wbd_path, nhd_path, level) {
   hucName <- paste("WBDHU", level, "Counts.gpkg", sep="")
   boundaries <- st_read(paste(wbd_path, hucName, sep=""))
   
-  for (i in nrow(boundaries)) {
+  for (i in 1:nrow(boundaries)) {
     hucBound <- boundaries[i,]
     hucFlowlines <- network[hucBound,]
-    saveRDS(hucFlowlines, file = paste("flowlines_", i, sep=""))
+    saveRDS(hucFlowlines, file = paste("flowlines_", i, ".rds", sep=""))
   }
 }
 
