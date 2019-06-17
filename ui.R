@@ -13,7 +13,7 @@ library(tmap)
 fluidPage(
   
   # titlePanel("Water Quality Portal"),
-  class="outer",
+  class="hucMap",
   
   tags$head(
     includeCSS("styles.css")
@@ -21,6 +21,7 @@ fluidPage(
   
   # Map Output
   leafletOutput(outputId = "wqpMap", height = "100%", width="100%"),
+  # leafletOutput(outputId = "wqpMap", height = "400px", width="800px"),
   
   absolutePanel(id = "Inputs", fixed = TRUE, draggable = TRUE, top = 450, left = "auto", right = 40, bottom = "auto",
                 width = 200, height = "auto", class = "pan",
@@ -44,9 +45,7 @@ fluidPage(
                 conditionalPanel(condition = "output.select",
                                 actionButton("zoom", "Show me more!")
                 )
-  )
+  ),
   
-  # conditionalPanel(condition = "output.show == 'show'",
-  #   leafletOutput(outputId = "testMap")
-  # )
+  uiOutput("zoomedIn")
 )
