@@ -23,6 +23,9 @@ function(input, output, session) {
   
   palette = "Blues" #Any pallette, I like YlOrRd or Blues
   
+  hucSelected <<- -1
+  selectedHucBound <<- NULL
+  
   observe({
     hucLevel <- input$hucInput
     # hucLevelUp <- as.numeric(hucLevel) - 2
@@ -85,7 +88,7 @@ function(input, output, session) {
                       textsize = "12px"
                     ),
                     options = pathOptions(pane = "main")
-        )
+        ) %>% addLegend("bottomleft", pal, values = allCounts, layerId = "legend")
     } else {
       pal <- colorBin(palette, domain=boundaries[[constCol]], bins=bins)
       
@@ -109,17 +112,16 @@ function(input, output, session) {
                       textsize = "12px"
                     ),
                     options = pathOptions(pane = "main")
-        )
+        ) %>% addLegend("bottomleft", pal, boundaries[[constCol]], layerId = "legend")
     }
     
-    hucSelected <- -1
     observeEvent(input$wqpMap_shape_click, {
       
       event <- input$wqpMap_shape_click
       if (event$id != paste(hucSelected, "Selected", sep="")) {
         oldHuc <- hucSelected
         hucSelected <<- event$id
-        selectedHucBound <- boundaries %>% 
+        selectedHucBound <<- boundaries %>% 
           filter(.data[[hucColumn]] == hucSelected)
         
         selectedPoly <- leafletProxy("wqpMap", data=selectedHucBound) %>%
@@ -155,13 +157,8 @@ function(input, output, session) {
             )
         }
         print(class(event$id))
-        print(paste("you've selected: ", event$id, sep=""))
+        print(paste("you've selected: ", hucSelected, sep=""))
         output$select <- reactive({T})
-        # # Side-map with flowlines
-        # 
-        # output$miniFlowlines <- renderLeaflet({
-        #   leaflet()
-        # })
       } else {
         leafletProxy("wqpMap") %>% removeShape(event$id)
         output$select <- reactive({F})
@@ -169,4 +166,35 @@ function(input, output, session) {
     })
   })
   outputOptions(output, "select", suspendWhenHidden = FALSE)
+  
+  observeEvent(input$zoom, {
+    output$hucDetail <- renderLeaflet({
+      # Bounds fit continental US
+      hucDetailMap <- leaflet() %>% addProviderTiles(providers$Esri.WorldGrayCanvas) %>% 
+        addPolygons(data = selectedHucBound,
+                    layerId = hucSelected,
+                    label = hucSelected,
+                    color = "black",
+                    weight = 3)
+      
+    })
+    output$zoomedIn <- renderUI({
+      fluidPage(
+        class = "details",
+        actionButton("back", "Take me back!"),
+        leafletOutput(outputId = "hucDetail", height = "400px", width="400px"),
+        plotlyOutput("coverage")
+      )
+    })
+  })
+  
+  observeEvent(input$back, {
+    output$zoomedIn <- NULL
+    selectedHucBound <<- NULL
+  })
+  
+  output$coverage <- renderPlotly({
+    
+  })
+  
 }

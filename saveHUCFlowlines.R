@@ -22,7 +22,7 @@ saveHUCFlowlines <- function(wbd_path, nhd_path, level) {
   for (i in 1:nrow(boundaries)) {
     hucBound <- boundaries[i,]
     hucFlowlines <- network[hucBound,]
-    saveRDS(hucFlowlines, file = paste("flowlines_", i, ".rds", sep=""))
+    saveRDS(hucFlowlines, file = paste("flowlines_", hucBound$HUC2, ".rds", sep=""))
   }
 }
 
