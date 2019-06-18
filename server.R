@@ -19,12 +19,13 @@ function(input, output, session) {
     leaflet() %>% addProviderTiles(providers$Esri.WorldGrayCanvas) %>% fitBounds(-100, 25, -75, 55)
   })
   
-  output$select <- reactive({F})
-  
   palette = "Blues" #Any pallette, I like YlOrRd or Blues
   
   hucSelected <<- -1
   selectedHucBound <<- NULL
+  
+  output$select <- reactive({F})
+  outputOptions(output, "select", suspendWhenHidden = FALSE)
   
   observe({
     hucLevel <- input$hucInput
@@ -58,6 +59,7 @@ function(input, output, session) {
                     fillOpacity = 0,
                     weight = 3,
                     color = "gray",
+                    group = "upperBoundaries",
                     options = pathOptions(pane = "larger")
         )
     }
@@ -118,7 +120,12 @@ function(input, output, session) {
     observeEvent(input$wqpMap_shape_click, {
       
       event <- input$wqpMap_shape_click
-      if (event$id != paste(hucSelected, "Selected", sep="")) {
+      
+      if(is.null(event$id)) {                                           # If the user clicks on a boundary
+        print("boundary selected")
+      } else if (nchar(hucSelected) != as.numeric(hucLevel)) {          # If the user changes the HUC
+        output$select <- reactive({F})
+      } else if (event$id != paste(hucSelected, "Selected", sep="")) {  # If the user clicks on a new HUC
         oldHuc <- hucSelected
         hucSelected <<- event$id
         selectedHucBound <<- boundaries %>% 
@@ -156,16 +163,15 @@ function(input, output, session) {
                         options = pathOptions(pane = "selections")
             )
         }
-        print(class(event$id))
         print(paste("you've selected: ", hucSelected, sep=""))
         output$select <- reactive({T})
-      } else {
+      } else {                                                          # If the user clicks on the selected HUC
+        print(paste("removed:", event$id))
         leafletProxy("wqpMap") %>% removeShape(event$id)
         output$select <- reactive({F})
       }
     })
   })
-  outputOptions(output, "select", suspendWhenHidden = FALSE)
   
   observeEvent(input$zoom, {
     output$hucDetail <- renderLeaflet({
@@ -182,8 +188,8 @@ function(input, output, session) {
       fluidPage(
         class = "details",
         actionButton("back", "Take me back!"),
-        leafletOutput(outputId = "hucDetail", height = "400px", width="400px"),
-        plotlyOutput("coverage")
+        leafletOutput(outputId = "hucDetail", height = "400px", width="400px")
+        # plotlyOutput("coverage")
       )
     })
   })
@@ -193,8 +199,8 @@ function(input, output, session) {
     selectedHucBound <<- NULL
   })
   
-  output$coverage <- renderPlotly({
-    
-  })
+  # output$coverage <- renderPlotly({
+  #   
+  # })
   
 }
