@@ -1,0 +1,18 @@
+---
+title: "Read and output of maps"
+output:
+---
+
+```{r}
+library(tmap)
+library(sf)
+library(rmapshaper)
+library(rgeos)
+library(dplyr)
+file_dir <- "~/Documents/Large Datasets/simplified_WBDHU12.shp"
+
+tmap_mode("view")
+st_read(file_dir, quiet = TRUE) %>% 
+  tm_shape() + tm_polygons()
+```
+
