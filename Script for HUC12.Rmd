@@ -1,0 +1,79 @@
+---
+title: "Script for HUC12"
+output: html_notebook
+---
+```{r}
+library(sf)
+library(rmapshaper)
+library(rgeos)
+library(tmap)
+library(dplyr)
+
+setwd("~/Documents/Large Datasets/")
+wbd_path <- "~/Documents/Large Datasets/WBD_National_GDB/WBD_National_GDB.gdb/"
+
+bounds <- st_read(wbd_path, "WBDHU12", quiet=TRUE)
+bounds_1 <- mutate(bounds, new_HUC12 = as.character(HUC12))
+```
+
+```{r}
+setwd("~/Documents/Large Datasets/")
+for (i in seq(1, 9, 1)) {
+  var_name <- paste("HUC2_", i, sep = "")
+  level <- paste("0", i, sep = "")
+  assign(var_name, bounds_1 %>% filter(startsWith(new_HUC12, level) == TRUE) %>% select(-new_HUC12))
+}
+
+for (i in seq(10, 22, 1)) {
+  var_name <- paste("HUC2_", i, sep = "")
+  level <- as.character(i)
+  assign(var_name, bounds_1 %>% filter(startsWith(new_HUC12, level) == TRUE) %>% select(-new_HUC12))
+}
+```
+
+```{r}
+setwd("~/Documents/Large Datasets/")
+for (i in seq(16, 22, 1)) {
+  var_name <- paste("HUC2_", i, sep = "")
+  file_name <- paste("WBDHU12_", i, ".shp", sep = "")
+  st_write(get(var_name), file_name, delete_layer = TRUE)
+}
+#################################
+#i==4 or 5 is slower than others, can do separately!!! 
+#################################
+```
+
+```{r} 
+library(sf)
+library(rmapshaper)
+library(rgeos)
+library(tmap)
+library(dplyr)
+setwd("~/Documents/Large Datasets/")
+
+for (i in seq(19, 19, 1)) {
+  ori_file_name <- paste("WBDHU12_", i, ".shp", sep = "")
+  #before_name <- paste("HUC2_", i, sep = "")
+  after_name <- paste("simp_HUC2_", i, sep = "")
+  sim_file_name <- paste("simp_WBDHU12_", i, "_0.02.shp", sep = "")
+  
+  ori_file_name %>%
+    st_read(quiet = TRUE) %>%
+    ms_simplify(keep = 0.02) %>% 
+    st_write(sim_file_name, delete_layer = TRUE)
+}
+###########################################
+#HUC level    are still to be done
+###########################################
+```
+
+```{r}
+
+for (i in seq(1, 22, 1)) {
+  file_name <- paste("simp_WBDHU12_", i, "_0.02.shp", sep = "")
+  after_name <- paste("simp_HUC2_", i, sep = "")
+  
+  file_name %>% st_read(quiet = TRUE)
+}
+```
+
