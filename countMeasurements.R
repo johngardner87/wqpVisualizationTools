@@ -10,7 +10,7 @@ library(sf)
 #' 
 countMeasurements <- function(dir, constituents) {
   setwd(dir)
-  for (i in seq(2, 10, 2)) {
+  for (i in seq(2, 12, 2)) {
     bounds <- st_read(paste("Datasets/WBD_Simplified/WBDHU", i, ".gpkg", sep=""))
     for (const in constituents) {
       measurements <- st_read(paste("Datasets/wqp_Constituents/wqp_", const, ".gpkg", sep=""))
