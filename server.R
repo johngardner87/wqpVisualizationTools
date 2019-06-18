@@ -23,7 +23,7 @@ function(input, output, session) {
   
   hucSelected <<- -1
   selectedHucBound <<- NULL
-  
+
   output$select <- reactive({F})
   outputOptions(output, "select", suspendWhenHidden = FALSE)
   
@@ -174,6 +174,21 @@ function(input, output, session) {
   })
   
   observeEvent(input$zoom, {
+    
+    output$zoomedIn <- renderUI({
+      fluidPage(
+        class = "details",
+        actionButton("back", "Take me back!"),
+        leafletOutput(outputId = "hucDetail", height = "400px", width="400px"),
+        checkboxInput("cluster", "Cluster ", T)
+        # plotlyOutput("coverage")
+      )
+    })
+    
+    wqp_data_chlor <- st_read("~/Documents/School/Duke/Summer 2019/Data+/Datasets/wqp_Constituents/wqp_chlorophyll.gpkg")
+    # selected_wqp_data <- wqp_data_chlor[selectedHucBound,]
+    selected_wqp_data <- filter(wqp_data_chlor, startsWith(as.character(HUCEightDigitCode), hucSelected))
+    
     output$hucDetail <- renderLeaflet({
       # Bounds fit continental US
       hucDetailMap <- leaflet() %>% addProviderTiles(providers$Esri.WorldGrayCanvas) %>% 
@@ -182,15 +197,37 @@ function(input, output, session) {
                     label = hucSelected,
                     color = "black",
                     weight = 3)
-      
     })
-    output$zoomedIn <- renderUI({
-      fluidPage(
-        class = "details",
-        actionButton("back", "Take me back!"),
-        leafletOutput(outputId = "hucDetail", height = "400px", width="400px")
-        # plotlyOutput("coverage")
-      )
+  
+    observe({
+      if(!is.null(input$cluster)) {
+        clusterBool <- input$cluster
+        markers <- leafletProxy("hucDetail", data = selected_wqp_data)
+        clearMarkerClusters(markers)
+        clearShapes(markers)
+        if(clusterBool) {
+          markers %>%
+            addCircleMarkers(radius = 5,
+                             data = selected_wqp_data,
+                             stroke = F,
+                             color = "black",
+                             clusterOptions = markerClusterOptions(),
+                             # layerId = ~SiteID,
+                             group = "markers",
+                             label = ~MonitoringLocationName)
+        } else {
+          markers %>%
+            addCircles(radius = 40,
+                       data = selected_wqp_data,
+                       stroke = F,
+                       color = "black",
+                       # clusterOptions = markerClusterOptions(),
+                       # layerId = ~SiteID,
+                       group = "markers",
+                       label = ~MonitoringLocationName
+            )
+        }
+      }
     })
   })
   
