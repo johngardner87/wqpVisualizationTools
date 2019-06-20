@@ -180,35 +180,45 @@ function(input, output, session) {
         class = "details",
         actionButton("back", "Take me back!"),
         leafletOutput(outputId = "hucDetail", height = "400px", width="400px"),
-        checkboxInput("cluster", "Cluster ", T)
-        # plotlyOutput("coverage")
+        checkboxInput("cluster", "Cluster ", F),
+        plotlyOutput("coverage")
       )
     })
-    
-    wqp_data_chlor <- st_read("~/Documents/School/Duke/Summer 2019/Data+/Datasets/wqp_Constituents/wqp_chlorophyll.gpkg")
-    # selected_wqp_data <- wqp_data_chlor[selectedHucBound,]
-    selected_wqp_data <- filter(wqp_data_chlor, startsWith(as.character(HUCEightDigitCode), hucSelected))
     
     output$hucDetail <- renderLeaflet({
       # Bounds fit continental US
       hucDetailMap <- leaflet() %>% addProviderTiles(providers$Esri.WorldGrayCanvas) %>% 
         addPolygons(data = selectedHucBound,
                     layerId = hucSelected,
-                    label = hucSelected,
+                    group = "bounds",
+                    #label = hucSelected,
                     color = "black",
+                    fillOpacity = 0.1,
                     weight = 3)
     })
-  
+    
+    wqp_path <- sprintf("~/Documents/School/Duke/Summer 2019/Data+/Datasets/wqp_Constituents/wqp_%s_indexed.gpkg", input$constInput)
+    wqp_query <- sprintf("SELECT * FROM wqp_%s_indexed WHERE HUCEightDigitCode LIKE '%s%%'", input$constInput, hucSelected)
+    selected_wqp_data <- st_read(wqp_path, query=wqp_query)
+    
+    nhd_path <- "~/Documents/School/Duke/Summer 2019/Data+/Datasets/NHDPlusNationalData/Flowlines/"
+    nhd_file_path <- paste0(nhd_path, "flowlines_simplified_", substr(hucSelected, 1, 2),".rds")
+    regionFlowlines <- readRDS(nhd_file_path)
+    hucFlowlines <- filter(regionFlowlines, startsWith(REACHCODE, as.character(hucSelected)))
+    
+    coverageInfo <- select(hucFlowlines, COMID, TotDASqKM, Pathlength) %>% 
+      st_set_geometry(NULL)
+    selected_wqp_data_coverage <- left_join(selected_wqp_data, coverageInfo, by="COMID")
+    covg <- ggplot(selected_wqp_data_coverage) + geom_point(mapping = aes(x=date, y = TotDASqKM))
+    
     observe({
       if(!is.null(input$cluster)) {
         clusterBool <- input$cluster
         markers <- leafletProxy("hucDetail", data = selected_wqp_data)
-        clearMarkerClusters(markers)
-        clearShapes(markers)
+        clearGroup(markers, group="markers")
         if(clusterBool) {
           markers %>%
-            addCircleMarkers(radius = 5,
-                             data = selected_wqp_data,
+            addCircleMarkers(data = selected_wqp_data,
                              stroke = F,
                              color = "black",
                              clusterOptions = markerClusterOptions(),
@@ -217,17 +227,23 @@ function(input, output, session) {
                              label = ~MonitoringLocationName)
         } else {
           markers %>%
-            addCircles(radius = 40,
+            addCircleMarkers(radius = 3,
                        data = selected_wqp_data,
                        stroke = F,
-                       color = "black",
-                       # clusterOptions = markerClusterOptions(),
-                       # layerId = ~SiteID,
+                       color = "red",
+                       opacity = 0.8,
+                       fillOpacity = 0.2,
                        group = "markers",
                        label = ~MonitoringLocationName
             )
         }
       }
+    })
+    
+    output$coverage <- renderPlotly({
+      # {ggplot(selected_wqp_data_coverage) + geom_point(mapping = aes(x=date, y = TotDASqKM))} %>% 
+      ggplotly(covg, tooltip="river") %>%
+        toWebGL()
     })
   })
   
@@ -235,9 +251,4 @@ function(input, output, session) {
     output$zoomedIn <- NULL
     selectedHucBound <<- NULL
   })
-  
-  # output$coverage <- renderPlotly({
-  #   
-  # })
-  
 }
