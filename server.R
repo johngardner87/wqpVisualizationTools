@@ -1,5 +1,5 @@
 
-# -------------------------------------------------------------------------
+# Packages ----------------------------------------------------------------
 library(tidyverse)
 library(feather)
 library(shiny)
@@ -9,6 +9,7 @@ library(sf)
 library(rmapshaper)
 library(tmap)
 library(shinycssloaders)
+library(shinyalert)
 
 # Server ------------------------------------------------------------------
 
@@ -28,14 +29,16 @@ function(input, output, session) {
   output$select <- reactive({F})
   outputOptions(output, "select", suspendWhenHidden = FALSE)
   
+  # Main map ---------------------------------------------------------------
   observe({
     hucLevel <- input$hucInput
     # hucLevelUp <- as.numeric(hucLevel) - 2
     hucLevelUp <- 2
     hucColumn <- paste("HUC", hucLevel, sep="")
     constituent <- input$constInput
-    constCol <- paste(constituent, "MeasCount", sep="")
+    constCol <<- paste(constituent, "MeasCount", sep="")
     
+    # Load boundary data for selected HUC and HUC2 boundaries for context
     boundaries <- paste("WBDHU", hucLevel, "Counts", ".gpkg", sep = "") %>% 
       paste("Datasets/WBD_Simplified/", ., sep="") %>% 
       st_read()
@@ -48,13 +51,14 @@ function(input, output, session) {
     
     bins <- c(0, 10, 50, 1000, 3000, 6000, 20000, 100000, Inf)
     
+    # Map panes for proper layering of UI
     hucMap <- leafletProxy("wqpMap", data = boundaries) %>% 
       clearShapes() %>% 
-      addMapPane("larger", zIndex = 440) %>% 
-      addMapPane("main", zIndex = 420) %>% 
-      addMapPane("selections", zIndex = 430)
+      addMapPane("larger", zIndex = 440) %>% # Region boundaries for context
+      addMapPane("main", zIndex = 420) %>%   # Main boundaries
+      addMapPane("selections", zIndex = 430) # Selected boundaries
     
-    if(hucLevel > 2) {
+    if(hucLevel > 2) { # Only adds context boundaries for HUCs greater than 2
       hucMap %>% 
         addPolylines(data = upperBoundaries,
                     fillOpacity = 0,
@@ -65,6 +69,7 @@ function(input, output, session) {
         )
     }
     
+    # Drawing of main polygons with coloring based on constituent selection
     if (constituent == "All") {
       cols <- c("chlorophyllMeasCount", "docMeasCount", "secchiMeasCount", "tssMeasCount")
       allCounts <- boundaries[cols] %>% st_set_geometry(NULL) %>% reduce(`+`)
@@ -118,6 +123,7 @@ function(input, output, session) {
         ) %>% addLegend("bottomleft", pal, boundaries[[constCol]], layerId = "legend")
     }
     
+    # HUC selection (redraws polygon with red boundary, behaves differently depending on current selection)
     observeEvent(input$wqpMap_shape_click, {
       
       event <- input$wqpMap_shape_click
@@ -174,98 +180,126 @@ function(input, output, session) {
     })
   })
   
+  # Secondary window ---------------------------------------------------------------
   observeEvent(input$zoom, {
-    
-    output$zoomedIn <- renderUI({
-      fluidPage(
-        class = "details",
-        tags$h1("Coverage"),
-        actionButton("back", "Take me back!", icon = icon("arrow-left"), style="position:absolute; top:100px; right:100px"),
-        fluidRow(
-          column(6, 
-            leafletOutput(outputId = "hucDetail", height = "400px", width="400px") %>% withSpinner(type=2, color.background="white"),
-            checkboxInput("cluster", "Cluster ", F)
-          ),
-          column(6,
-                 plotlyOutput("coverage")
+    if(is.null(selectedHucBound[[constCol]]) || selectedHucBound[[constCol]] == 0) {
+      shinyalert(
+        text = "<div style='padding-left:40px; padding-right:40px'> 
+        There are no measurements of the chosen constituent type in the chosen region. </div>",
+        closeOnEsc = TRUE,
+        closeOnClickOutside = FALSE,
+        html = TRUE,
+        type = "error",
+        showConfirmButton = TRUE,
+        showCancelButton = FALSE,
+        confirmButtonText = "OK",
+        confirmButtonCol = "#001A57",
+        timer = 0,
+        # imageUrl = "",
+        animation = TRUE
+      )
+    } else {
+      output$zoomedIn <- renderUI({
+        fluidPage(
+          class = "details",
+          tags$h1(paste("Coverage in the", selectedHucBound$NAME)),
+          tags$h3(paste("HUC:", hucSelected)),
+          actionButton("back", "Take me back!", icon = icon("arrow-left"), style="position:absolute; top:40px; right:90px"),
+          fluidRow(
+            column(6, 
+              leafletOutput(outputId = "hucDetail") %>% withSpinner(type=2, color.background="white"),
+              checkboxInput("cluster", "Cluster ", F)
+            ),
+            column(6,
+                   plotlyOutput("coverage")
+            )
           )
         )
-      )
-    })
-    
-    output$hucDetail <- renderLeaflet({
-      # Bounds fit continental US
-      hucDetailMap <- leaflet() %>% addProviderTiles(providers$Esri.WorldGrayCanvas) %>% 
-        addPolygons(data = selectedHucBound,
-                    layerId = hucSelected,
-                    group = "bounds",
-                    #label = hucSelected,
-                    color = "black",
-                    fillOpacity = 0.1,
-                    weight = 3) %>% 
-        addCircleMarkers(radius = 3,
-                         data = selected_wqp_data,
+      })
+      
+      # Loading relevant wqp data and flowline data
+      wqp_path <- sprintf(
+        "~/Documents/School/Duke/Summer 2019/Data+/Datasets/wqp_Constituents/wqp_%s_indexed.gpkg", input$constInput)
+      wqp_query <- sprintf(
+        "SELECT * FROM wqp_%s_indexed WHERE HUCEightDigitCode LIKE '%s%%'", input$constInput, hucSelected)
+      selected_wqp_data <- st_read(wqp_path, query=wqp_query)
+      
+      nhd_path <- "~/Documents/School/Duke/Summer 2019/Data+/Datasets/NHDPlusNationalData/Flowlines/"
+      nhd_file_path <- paste0(nhd_path, "flowlines_simplified_", substr(hucSelected, 1, 2),".rds")
+      regionFlowlines <- readRDS(nhd_file_path)
+      hucFlowlines <- filter(regionFlowlines, startsWith(REACHCODE, as.character(hucSelected)))
+      
+      coverageInfo <- select(hucFlowlines, COMID, TotDASqKM, Pathlength) %>% 
+        st_set_geometry(NULL)
+      selected_wqp_data_coverage <- left_join(selected_wqp_data, coverageInfo, by="COMID")
+      key <- highlight_key(selected_wqp_data_coverage, ~MonitoringLocationName)
+      covg <- key %>% ggplot() + geom_point(mapping = aes(x=date, y = TotDASqKM))
+      
+      # Secondary detail map with markers for site locations
+      output$hucDetail <- renderLeaflet({
+        # Bounds fit continental US
+        hucDetailMap <- leaflet(key) %>% addProviderTiles(providers$Esri.WorldGrayCanvas) %>% 
+          addPolygons(data = selectedHucBound,
+                      layerId = hucSelected,
+                      group = "bounds",
+                      #label = hucSelected,
+                      color = "black",
+                      fillOpacity = 0.1,
+                      weight = 3) %>% 
+          addCircleMarkers(radius = 3,
+                           data = selected_wqp_data,
+                           stroke = F,
+                           color = "red",
+                           opacity = 0.8,
+                           fillOpacity = 0.2,
+                           group = "markers",
+                           label = ~MonitoringLocationName
+          )
+      })
+      
+      # Cluster selection option
+      observe({
+        if(!is.null(input$cluster)) {
+          clusterBool <- input$cluster
+          markers <- leafletProxy("hucDetail", data = selected_wqp_data_coverage)
+          clearGroup(markers, group="markers")
+          if(clusterBool) {
+            markers %>%
+              addCircleMarkers(data = selected_wqp_data_coverage,
+                               stroke = F,
+                               color = "black",
+                               clusterOptions = markerClusterOptions(),
+                               # layerId = ~SiteID,
+                               group = "markers",
+                               label = ~MonitoringLocationName)
+          } else {
+            markers %>%
+              addCircleMarkers(radius = 3,
+                         data = selected_wqp_data_coverage,
                          stroke = F,
                          color = "red",
                          opacity = 0.8,
                          fillOpacity = 0.2,
                          group = "markers",
                          label = ~MonitoringLocationName
-        )
-    })
-    
-    wqp_path <- sprintf("~/Documents/School/Duke/Summer 2019/Data+/Datasets/wqp_Constituents/wqp_%s_indexed.gpkg", input$constInput)
-    wqp_query <- sprintf("SELECT * FROM wqp_%s_indexed WHERE HUCEightDigitCode LIKE '%s%%'", input$constInput, hucSelected)
-    selected_wqp_data <- st_read(wqp_path, query=wqp_query)
-    
-    nhd_path <- "~/Documents/School/Duke/Summer 2019/Data+/Datasets/NHDPlusNationalData/Flowlines/"
-    nhd_file_path <- paste0(nhd_path, "flowlines_simplified_", substr(hucSelected, 1, 2),".rds")
-    regionFlowlines <- readRDS(nhd_file_path)
-    hucFlowlines <- filter(regionFlowlines, startsWith(REACHCODE, as.character(hucSelected)))
-    
-    coverageInfo <- select(hucFlowlines, COMID, TotDASqKM, Pathlength) %>% 
-      st_set_geometry(NULL)
-    selected_wqp_data_coverage <- left_join(selected_wqp_data, coverageInfo, by="COMID")
-    covg <- ggplot(selected_wqp_data_coverage) + geom_point(mapping = aes(x=date, y = TotDASqKM))
-    
-    observe({
-      if(!is.null(input$cluster)) {
-        clusterBool <- input$cluster
-        markers <- leafletProxy("hucDetail", data = selected_wqp_data)
-        clearGroup(markers, group="markers")
-        if(clusterBool) {
-          markers %>%
-            addCircleMarkers(data = selected_wqp_data,
-                             stroke = F,
-                             color = "black",
-                             clusterOptions = markerClusterOptions(),
-                             # layerId = ~SiteID,
-                             group = "markers",
-                             label = ~MonitoringLocationName)
-        } else {
-          markers %>%
-            addCircleMarkers(radius = 3,
-                       data = selected_wqp_data,
-                       stroke = F,
-                       color = "red",
-                       opacity = 0.8,
-                       fillOpacity = 0.2,
-                       group = "markers",
-                       label = ~MonitoringLocationName
-            )
+              )
+          }
         }
-      }
-    })
-    
-    output$coverage <- renderPlotly({
-      # {ggplot(selected_wqp_data_coverage) + geom_point(mapping = aes(x=date, y = TotDASqKM))} %>% 
-      ggplotly(covg, tooltip="river") %>%
-        toWebGL()
-    })
+      })
+      
+      # Coverage plot
+      output$coverage <- renderPlotly({
+        # {ggplot(selected_wqp_data_coverage) + geom_point(mapping = aes(x=date, y = TotDASqKM))} %>% 
+        ggplotly(covg, tooltip="river") %>%
+          toWebGL() %>% 
+          highlight("plotly_selected")
+      })
+    }
   })
   
+  # Back button
   observeEvent(input$back, {
     output$zoomedIn <- NULL
-    selectedHucBound <<- NULL
+    # selectedHucBound <<- NULL
   })
 }

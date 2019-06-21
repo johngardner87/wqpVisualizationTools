@@ -14,7 +14,7 @@ fluidPage(
   
   # titlePanel("Water Quality Portal"),
   class="hucMap",
-  
+  useShinyalert(),
   tags$head(
     includeCSS("styles.css")
   ),
@@ -30,7 +30,8 @@ fluidPage(
                 
                 selectInput(inputId = "hucInput",
                             label = "HUC Level",
-                            choices = c(2, 4, 6, 8, 10, 12)),
+                            # choices = c(2, 4, 6, 8, 10, 12)),
+                            choices = c(2, 4, 6, 8)),
                 
                 selectInput(inputId = "constInput",
                             label = "Constituent",
