@@ -8,6 +8,7 @@ library(leaflet)
 library(sf)
 library(rmapshaper)
 library(tmap)
+library(shinycssloaders)
 
 # Server ------------------------------------------------------------------
 
@@ -178,10 +179,17 @@ function(input, output, session) {
     output$zoomedIn <- renderUI({
       fluidPage(
         class = "details",
-        actionButton("back", "Take me back!"),
-        leafletOutput(outputId = "hucDetail", height = "400px", width="400px"),
-        checkboxInput("cluster", "Cluster ", F),
-        plotlyOutput("coverage")
+        tags$h1("Coverage"),
+        actionButton("back", "Take me back!", icon = icon("arrow-left"), style="position:absolute; top:100px; right:100px"),
+        fluidRow(
+          column(6, 
+            leafletOutput(outputId = "hucDetail", height = "400px", width="400px") %>% withSpinner(type=2, color.background="white"),
+            checkboxInput("cluster", "Cluster ", F)
+          ),
+          column(6,
+                 plotlyOutput("coverage")
+          )
+        )
       )
     })
     
@@ -194,7 +202,16 @@ function(input, output, session) {
                     #label = hucSelected,
                     color = "black",
                     fillOpacity = 0.1,
-                    weight = 3)
+                    weight = 3) %>% 
+        addCircleMarkers(radius = 3,
+                         data = selected_wqp_data,
+                         stroke = F,
+                         color = "red",
+                         opacity = 0.8,
+                         fillOpacity = 0.2,
+                         group = "markers",
+                         label = ~MonitoringLocationName
+        )
     })
     
     wqp_path <- sprintf("~/Documents/School/Duke/Summer 2019/Data+/Datasets/wqp_Constituents/wqp_%s_indexed.gpkg", input$constInput)
