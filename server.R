@@ -10,6 +10,7 @@ library(rmapshaper)
 library(tmap)
 library(shinycssloaders)
 library(shinyalert)
+library(crosstalk)
 
 # Server ------------------------------------------------------------------
 
@@ -18,13 +19,21 @@ function(input, output, session) {
   
   output$wqpMap <- renderLeaflet({
     # Bounds fit continental US
-    leaflet() %>% addProviderTiles(providers$Esri.WorldGrayCanvas) %>% fitBounds(-100, 25, -75, 55)
+    leaflet() %>% addProviderTiles(providers$Esri.WorldGrayCanvas) %>% fitBounds(-100, 25, -75, 55) 
   })
   
   palette = "Blues" #Any pallette, I like YlOrRd or Blues
   
   hucSelected <<- -1
   selectedHucBound <<- NULL
+  hucRegions <- tibble("02" = "",
+                       "04" = "Subregion",
+                       "06" = "Basin",
+                       "08" = "Subbasin",
+                       "10" = "Watershed",
+                       "12" = "Subwatershed")
+  
+  options(opacityDim = 0, persistent = F, selected = attrs_selected(fill="toself", fillcolor = "green"))
 
   output$select <- reactive({F})
   outputOptions(output, "select", suspendWhenHidden = FALSE)
@@ -75,6 +84,7 @@ function(input, output, session) {
       allCounts <- boundaries[cols] %>% st_set_geometry(NULL) %>% reduce(`+`)
       boundaries <- mutate(boundaries, AllMeasCount = allCounts)
       pal <- colorBin(palette, domain=allCounts, bins=bins)
+      # pal <- colorQuantile(palette, domain=allCounts, n = 6)
       
       hucMap %>%
         addPolygons(fillColor = ~pal(allCounts), #topo.colors(10)
@@ -202,7 +212,7 @@ function(input, output, session) {
       output$zoomedIn <- renderUI({
         fluidPage(
           class = "details",
-          tags$h1(paste("Coverage in the", selectedHucBound$NAME)),
+          tags$h1(paste("Coverage in the", selectedHucBound$NAME, hucRegions[sprintf("%02s", str_length(hucSelected))])),
           tags$h3(paste("HUC:", hucSelected)),
           actionButton("back", "Take me back!", icon = icon("arrow-left"), style="position:absolute; top:40px; right:90px"),
           fluidRow(
@@ -232,42 +242,56 @@ function(input, output, session) {
       coverageInfo <- select(hucFlowlines, COMID, TotDASqKM, Pathlength) %>% 
         st_set_geometry(NULL)
       selected_wqp_data_coverage <- left_join(selected_wqp_data, coverageInfo, by="COMID")
-      key <- highlight_key(selected_wqp_data_coverage, ~MonitoringLocationName)
-      covg <- key %>% ggplot() + geom_point(mapping = aes(x=date, y = TotDASqKM))
+      key <- highlight_key(selected_wqp_data_coverage, group = "coverage")
+      # covg <- ggplot(key) + geom_point(mapping = aes(x=date, y = TotDASqKM))
       
       # Secondary detail map with markers for site locations
       output$hucDetail <- renderLeaflet({
         # Bounds fit continental US
-        hucDetailMap <- leaflet(key) %>% addProviderTiles(providers$Esri.WorldGrayCanvas) %>% 
+        hucDetailMap <- leaflet(key) %>% 
+          addProviderTiles(providers$Esri.WorldGrayCanvas,
+                           options = providerTileOptions(updateWhenZooming=F, updateWhenIdle = T)) %>% 
           addPolygons(data = selectedHucBound,
                       layerId = hucSelected,
                       group = "bounds",
                       #label = hucSelected,
                       color = "black",
                       fillOpacity = 0.1,
-                      weight = 3) %>% 
-          addCircleMarkers(radius = 3,
-                           data = selected_wqp_data,
-                           stroke = F,
-                           color = "red",
-                           opacity = 0.8,
-                           fillOpacity = 0.2,
-                           group = "markers",
-                           label = ~MonitoringLocationName
-          )
+                      weight = 3) #%>% 
+          # addCircleMarkers(radius = 3,
+          #                  data = key,
+          #                  stroke = F,
+          #                  color = "red",
+          #                  opacity = 0.8,
+          #                  fillOpacity = 0.2,
+          #                  group = "markers",
+          #                  label = ~MonitoringLocationName
+          # )
       })
       
+      markers <- leafletProxy("hucDetail", data = key) %>% 
+        addCircleMarkers(radius = 3,
+                          data = key,
+                          stroke = F,
+                          color = "red",
+                          opacity = 0.8,
+                          fillOpacity = 0.2,
+                          group = "markers",
+                          label = ~MonitoringLocationName
+                        )
+      
       # Cluster selection option
-      observe({
+      observeEvent(input$cluster, {
         if(!is.null(input$cluster)) {
+          # if(input$cluster == pastCluster) {return()}
           clusterBool <- input$cluster
-          markers <- leafletProxy("hucDetail", data = selected_wqp_data_coverage)
+          markers <- leafletProxy("hucDetail", data = key)
           clearGroup(markers, group="markers")
           if(clusterBool) {
             markers %>%
-              addCircleMarkers(data = selected_wqp_data_coverage,
+              addCircleMarkers(
                                stroke = F,
-                               color = "black",
+                               # color = "black",
                                clusterOptions = markerClusterOptions(),
                                # layerId = ~SiteID,
                                group = "markers",
@@ -275,7 +299,6 @@ function(input, output, session) {
           } else {
             markers %>%
               addCircleMarkers(radius = 3,
-                         data = selected_wqp_data_coverage,
                          stroke = F,
                          color = "red",
                          opacity = 0.8,
@@ -289,11 +312,15 @@ function(input, output, session) {
       
       # Coverage plot
       output$coverage <- renderPlotly({
-        # {ggplot(selected_wqp_data_coverage) + geom_point(mapping = aes(x=date, y = TotDASqKM))} %>% 
-        ggplotly(covg, tooltip="river") %>%
-          toWebGL() %>% 
-          highlight("plotly_selected")
+        covg <- plot_ly(key, x=~date, y=~TotDASqKM, source="subset") %>% 
+          add_markers(alpha = 0.5) %>% 
+          highlight("plotly_selected") %>% 
+          toWebGL()
       })
+      
+      # output$timeSeries <- renderplotly({
+      #   event.data <- event_data("plotly_selected", source = "subset")
+      # })
     }
   })
   
