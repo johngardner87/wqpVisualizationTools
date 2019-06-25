@@ -213,7 +213,7 @@ function(input, output, session) {
         fluidPage(
           class = "details",
           tags$h1(paste("Coverage in the", selectedHucBound$NAME, hucRegions[sprintf("%02s", str_length(hucSelected))])),
-          tags$h3(paste("HUC:", hucSelected)),
+          tags$h3(paste0("HUC", str_length(hucSelected), ": ", hucSelected)),
           actionButton("back", "Take me back!", icon = icon("arrow-left"), style="position:absolute; top:40px; right:90px"),
           fluidRow(
             column(6, 
@@ -223,7 +223,10 @@ function(input, output, session) {
             column(6,
                    plotlyOutput("coverage")
             )
-          )
+          ),
+          # dateRangeInput("dateFilter", "Date range:"),
+          # fluidRow(column(6,plotlyOutput("timeSeries")))
+          plotlyOutput("timeSeries")
         )
       })
       
@@ -234,11 +237,26 @@ function(input, output, session) {
         "SELECT * FROM wqp_%s_indexed WHERE HUCEightDigitCode LIKE '%s%%'", input$constInput, hucSelected)
       selected_wqp_data <- st_read(wqp_path, query=wqp_query)
       
+      start <- Sys.time()
       nhd_path <- "~/Documents/School/Duke/Summer 2019/Data+/Datasets/NHDPlusNationalData/Flowlines/"
       nhd_file_path <- paste0(nhd_path, "flowlines_simplified_", substr(hucSelected, 1, 2),".rds")
       regionFlowlines <- readRDS(nhd_file_path)
       hucFlowlines <- filter(regionFlowlines, startsWith(REACHCODE, as.character(hucSelected)))
+      print(Sys.time() - start)
       
+      # start <- Sys.time()
+      # nhd_path <- "~/Documents/School/Duke/Summer 2019/Data+/Datasets/NHDPlusNationalData/Flowlines_HUC8"
+      # hucFlowlines <- list.files(nhd_path, pattern=paste0("^HUC8_", hucSelected), full.names = T) %>%
+      #   map(readRDS) %>%
+      #   do.call(rbind, .)
+      # print(Sys.time() - start)
+      # 
+      # start <- Sys.time()
+      # nhd_path <- "~/Documents/School/Duke/Summer 2019/Data+/Datasets/NHDPlusNationalData/nhdplus_flowline.gpkg"
+      # nhd_query <- sprintf("SELECT * FROM nhdplus_flowline WHERE REACHCODE LIKE '%s%%'", hucSelected)
+      # hucFlowlines <- st_read(nhd_path, query = nhd_query)
+      # print(Sys.time() - start)
+      # 
       coverageInfo <- select(hucFlowlines, COMID, TotDASqKM, Pathlength) %>% 
         st_set_geometry(NULL)
       selected_wqp_data_coverage <- left_join(selected_wqp_data, coverageInfo, by="COMID")
@@ -249,8 +267,17 @@ function(input, output, session) {
       output$hucDetail <- renderLeaflet({
         # Bounds fit continental US
         hucDetailMap <- leaflet(key) %>% 
-          addProviderTiles(providers$Esri.WorldGrayCanvas,
-                           options = providerTileOptions(updateWhenZooming=F, updateWhenIdle = T)) %>% 
+          addProviderTiles(providers$Esri.WorldGrayCanvas, group = "Esri.WorldGrayCanvas",
+                           options = providerTileOptions(updateWhenZooming=F, updateWhenIdle = T)) %>%
+          addProviderTiles(providers$Esri.OceanBasemap, group = "Esri.OceanBasemap",
+                           options = providerTileOptions(updateWhenZooming=F, updateWhenIdle = T)) %>%
+          addProviderTiles(providers$CartoDB.DarkMatter, group = "DarkMatter (CartoDB)",
+                           options = providerTileOptions(updateWhenZooming=F, updateWhenIdle = T)) %>%
+          addProviderTiles(providers$Esri.WorldImagery, group = "Esri.WorldImagery",
+                           options = providerTileOptions(updateWhenZooming=F, updateWhenIdle = T)) %>%
+          addLayersControl(baseGroups = c("Esri.WorldGrayCanvas","Esri.OceanBasemap", "Esri.WorldImagery",
+                                          "DarkMatter (CartoDB)"),
+                           options = layersControlOptions(collapsed = TRUE, autoZIndex = T)) %>% 
           addPolygons(data = selectedHucBound,
                       layerId = hucSelected,
                       group = "bounds",
@@ -312,21 +339,54 @@ function(input, output, session) {
       
       # Coverage plot
       output$coverage <- renderPlotly({
-        covg <- plot_ly(key, x=~date, y=~TotDASqKM, source="subset") %>% 
-          add_markers(alpha = 0.5) %>% 
-          highlight("plotly_selected") %>% 
+        covg <- plot_ly(key, x=~date, y=~TotDASqKM) %>% 
+          add_markers(alpha = 0.5) %>%
+          highlight("plotly_selected") %>%
+          event_register("plotly_relayout") %>%
+          # rangeslider() #%>% 
           toWebGL()
       })
       
-      # output$timeSeries <- renderplotly({
-      #   event.data <- event_data("plotly_selected", source = "subset")
+      # observeEvent(event_data("plotly_relayout"), {
+      #   d <- event_data("plotly_relayout")
+      #   # unfortunately, the data structure emitted is different depending on
+      #   # whether the relayout is triggered from the rangeslider or the plot
+      #   xmin <- if (length(d[["xaxis.range[0]"]])) d[["xaxis.range[0]"]] else d[["xaxis.range"]][1]
+      #   xmax <- if (length(d[["xaxis.range[1]"]])) d[["xaxis.range[1]"]] else d[["xaxis.range"]][2]
+      #   if (is.null(xmin) || is.null(xmax)) return(NULL)
+      # 
+      #   # compute the y-range based on the new x-range
+      #   idx <- with(key$data(), xmin <= date & date <= xmax)
+      #   yrng <- extendrange(key$data()$TotDASqKM[idx])
+      # 
+      #   plotlyProxy("coverage", session) %>%
+      #     plotlyProxyInvoke("relayout", list(yaxis = list(range = yrng)))
       # })
+      # 
+      # yRange <- range(key$data()$TotDASqKM, na.rm = TRUE)
+      # observeEvent(event_data("plotly_doubleclick"), {
+      #     plotlyProxy("coverage", session) %>%
+      #     plotlyProxyInvoke("relayout", list(yaxis = list(range = yRange)))
+      #
+      # })
+      
+      
+      
+      output$timeSeries <- renderPlotly({
+        siteValsPlot <- ggplot(key) + 
+                        geom_point(mapping = aes(x=date_time, y=harmonized_value, color=harmonized_parameter)) + 
+                        labs(x="Date")#,y="Chlorophyll - ug/L")
+        ggplotly(siteValsPlot, dynamicTicks = TRUE)
+      })
     }
   })
   
   # Back button
   observeEvent(input$back, {
     output$zoomedIn <- NULL
+    output$timeSeries <- NULL
+    output$hucDetail <- NULL
+    output$coverage <- NULL
     # selectedHucBound <<- NULL
   })
 }
