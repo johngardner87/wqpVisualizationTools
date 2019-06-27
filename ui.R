@@ -24,8 +24,8 @@ fluidPage(
   leafletOutput(outputId = "wqpMap", height = "100%", width="100%"),
   # leafletOutput(outputId = "wqpMap", height = "400px", width="800px"),
   
-  absolutePanel(id = "Inputs", fixed = TRUE, draggable = TRUE, top = 450, left = "auto", right = 40, bottom = "auto",
-                width = 200, height = "auto", class = "pan",
+  absolutePanel(id = "inputs", fixed = T, draggable = TRUE, top = 450, left = "auto", right = 40, bottom = "auto",
+                width = 200, height = "auto",
                 
                 h2("Water Quality Portal"),
                 

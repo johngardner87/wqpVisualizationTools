@@ -16,14 +16,29 @@
   right: 0;
   bottom: 0;
   overflow: auto;
-  padding: 75px;
+  padding: 50px;
+  padding-top:10px;
   z-index:1000;
 }
 
-#Inputs {
+.row {
+  height:100px;
+}
+.widget {
+  background-color: #E2E6ED;
+  padding:10px;
+  border-radius: 20px;
+}
+
+#inputs {
   color: white;
-  background-color: #001A57;
+  /*background-color: #001A57;*/
+  background-color: #012169;
   padding: 0px 20px 20px 20px;
   opacity: 0.9;
   border-radius: 20px;
+}
+
+#settings {
+  background-color:#FFFFFF;
 }
