@@ -32,8 +32,17 @@ function(input, output, session) {
                        "08" = "Subbasin",
                        "10" = "Watershed",
                        "12" = "Subwatershed")
+  huc2Names <- tibble("01" = "New England Region", "02" = "Mid Atlantic Region", "03" = "South Atlantic-Gulf Region", 
+                      "04" = "Great Lakes Region", "05" = "Ohio Region", "06" = "Tennessee Region", 
+                      "07" = "Upper Mississippi Region", "08" = "Lower Mississippi Region", "09" = "Souris-Red-Rainy Region", 
+                      "10" = "Missouri Region", "11" = "Arkansas-White-Red Region", "12" = "Texas-Gulf Region", 
+                      "13" = "Rio Grande Region", "14" = "Upper Colorado Region", "15" = "Lower Colorado Region", 
+                      "16" = "Great Basin Region", "17" = "Pacific Northwest Region", "18" = "California Region", 
+                      "19" = "Alaska Region", "20" = "Hawaii Region", "21" = "Caribbean Region", 
+                      "22" = "South Pacific Region")
   
-  options(opacityDim = 0, persistent = F, selected = attrs_selected(fill="toself", fillcolor = "green"))
+  # options(opacityDim = 0, persistent = F, selected = attrs_selected(fill="toself", fillcolor = "green"))
+  options(opacityDim = 0)
 
   output$select <- reactive({F})
   outputOptions(output, "select", suspendWhenHidden = FALSE)
@@ -71,7 +80,7 @@ function(input, output, session) {
       hucMap %>% 
         addPolylines(data = upperBoundaries,
                     fillOpacity = 0,
-                    weight = 3,
+                    weight = 5,
                     color = "gray",
                     group = "upperBoundaries",
                     options = pathOptions(pane = "larger")
@@ -203,7 +212,7 @@ function(input, output, session) {
         showConfirmButton = TRUE,
         showCancelButton = FALSE,
         confirmButtonText = "OK",
-        confirmButtonCol = "#001A57",
+        confirmButtonCol = "#012169",
         timer = 0,
         # imageUrl = "",
         animation = TRUE
@@ -212,21 +221,36 @@ function(input, output, session) {
       output$zoomedIn <- renderUI({
         fluidPage(
           class = "details",
-          tags$h1(paste("Coverage in the", selectedHucBound$NAME, hucRegions[sprintf("%02s", str_length(hucSelected))])),
-          tags$h3(paste0("HUC", str_length(hucSelected), ": ", hucSelected)),
-          actionButton("back", "Take me back!", icon = icon("arrow-left"), style="position:absolute; top:40px; right:90px"),
           fluidRow(
-            column(6, 
-              leafletOutput(outputId = "hucDetail") %>% withSpinner(type=2, color.background="white"),
-              checkboxInput("cluster", "Cluster ", F)
+            column(10,
+                   tags$h1("Coverage in the ", strong(selectedHucBound$NAME), hucRegions[sprintf("%02s", str_length(hucSelected))])
+                   ),
+            column(2, 
+                   actionButton("back", "Take me back!", width = "100%", icon = icon("arrow-left"), style="position:absolute; top:28px")
+                   )
+          ),
+          tags$h3(paste0("HUC", str_length(hucSelected), ": "), hucSelected, " — ", selectedHucBound$AREASQKM, "sq. km in the ", huc2Names[substr(hucSelected, 1, 2)]),
+          fluidRow(
+            column(5,
+              div(class="widget", 
+                  leafletOutput(outputId = "hucDetail") %>% withSpinner(type=2, color.background="white")
+              )
             ),
-            column(6,
-                   plotlyOutput("coverage")
-            )
+            column(5,
+             div(class="widget",
+                plotlyOutput("coverage")
+             )
+            ),
+            column(2, 
+                    absolutePanel(id = "settings", height = 400,
+                                  
+                                  h3("Filters"),
+                                  checkboxInput("cluster", "Cluster ", F)
+                                  
+                    ))
           ),
           # dateRangeInput("dateFilter", "Date range:"),
-          # fluidRow(column(6,plotlyOutput("timeSeries")))
-          plotlyOutput("timeSeries")
+          fluidRow(column(10,plotlyOutput("timeSeries")))
         )
       })
       
@@ -277,40 +301,21 @@ function(input, output, session) {
                            options = providerTileOptions(updateWhenZooming=F, updateWhenIdle = T)) %>%
           addLayersControl(baseGroups = c("Esri.WorldGrayCanvas","Esri.OceanBasemap", "Esri.WorldImagery",
                                           "DarkMatter (CartoDB)"),
-                           options = layersControlOptions(collapsed = TRUE, autoZIndex = T)) %>% 
+                           options = layersControlOptions(collapsed = TRUE, autoZIndex = T)) %>%
           addPolygons(data = selectedHucBound,
                       layerId = hucSelected,
                       group = "bounds",
                       #label = hucSelected,
                       color = "black",
                       fillOpacity = 0.1,
-                      weight = 3) #%>% 
-          # addCircleMarkers(radius = 3,
-          #                  data = key,
-          #                  stroke = F,
-          #                  color = "red",
-          #                  opacity = 0.8,
-          #                  fillOpacity = 0.2,
-          #                  group = "markers",
-          #                  label = ~MonitoringLocationName
-          # )
+                      weight = 3) %>% 
+          addCircleMarkers(group="markers", radius = 3, stroke = F, color="red", opacity=0.8, fillOpacity=0.2)
       })
-      
-      markers <- leafletProxy("hucDetail", data = key) %>% 
-        addCircleMarkers(radius = 3,
-                          data = key,
-                          stroke = F,
-                          color = "red",
-                          opacity = 0.8,
-                          fillOpacity = 0.2,
-                          group = "markers",
-                          label = ~MonitoringLocationName
-                        )
-      
+
       # Cluster selection option
       observeEvent(input$cluster, {
         if(!is.null(input$cluster)) {
-          # if(input$cluster == pastCluster) {return()}
+          print("yep")
           clusterBool <- input$cluster
           markers <- leafletProxy("hucDetail", data = key)
           clearGroup(markers, group="markers")
@@ -334,9 +339,11 @@ function(input, output, session) {
                          label = ~MonitoringLocationName
               )
           }
+        } else {
+          print("nope")
         }
       })
-      
+
       # Coverage plot
       output$coverage <- renderPlotly({
         covg <- plot_ly(key, x=~date, y=~TotDASqKM) %>% 
@@ -370,8 +377,6 @@ function(input, output, session) {
       #
       # })
       
-      
-      
       output$timeSeries <- renderPlotly({
         siteValsPlot <- ggplot(key) + 
                         geom_point(mapping = aes(x=date_time, y=harmonized_value, color=harmonized_parameter)) + 
@@ -383,6 +388,8 @@ function(input, output, session) {
   
   # Back button
   observeEvent(input$back, {
+    key <- NULL
+    updateCheckboxInput(session, "cluster", T)
     output$zoomedIn <- NULL
     output$timeSeries <- NULL
     output$hucDetail <- NULL
