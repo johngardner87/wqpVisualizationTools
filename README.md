@@ -1,9 +1,8 @@
 # WQP_VizTool
-(Brief Intro)
-- This is a visualization tool based in R and R Shiny
 ```
 logo
 ```
+WQP_VizTool is a visualization tool for the US national water quality data. Based upon R and R Shiny, it provides a user-friendly interface to select, sort, download and explore the patterns of water quality and hydrology data, by linking it to the [Water Quality Portal](https://www.waterqualitydata.us/) sponsored by the United States Geological Survey (USGS), the Environmental Protection Agency (EPA), and the National Water Quality Monitoring Council (NWQMC). 
 
 ## Motivation
 
@@ -11,9 +10,12 @@ logo
 ## Installation
 - Install necessary libraries in R
 ```
-install.packages("tidyverse", "feather", "shiny", "plotly", 
-"leaflet", "sf", "rmapshaper", "tmap", 
-"shinycssloaders", "shinyalert")
+install.packages("tidyverse", "feather", "shiny", "plotly", "leaflet", "sf", "rmapshaper", "tmap", "shinycssloaders", "shinyalert")
+```
+- Downloading the package `(and necessary data? )` `or are we including data in the package?`
+- Setting the working directory
+```
+setwd("~/your_working_directory")
 ```
 
 ## Databases used in this visualization tool
