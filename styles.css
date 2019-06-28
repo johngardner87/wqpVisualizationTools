@@ -10,7 +10,7 @@
 
 .details {
   position: fixed;
-  background-color: white;
+  background-color: #fafafa;
   top:0;
   left: 0;
   right: 0;
@@ -22,12 +22,15 @@
 }
 
 .row {
-  height:100px;
+  margin-bottom:-2em;
 }
 .widget {
-  background-color: #E2E6ED;
+  /*background-color: #E2E6ED;*/
+  background-color: white;
   padding:10px;
   border-radius: 20px;
+  width: 100%;
+  margin-bottom:20px;
 }
 
 #inputs {
@@ -37,8 +40,4 @@
   padding: 0px 20px 20px 20px;
   opacity: 0.9;
   border-radius: 20px;
-}
-
-#settings {
-  background-color:#FFFFFF;
 }

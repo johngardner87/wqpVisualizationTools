@@ -15,6 +15,23 @@ library(crosstalk)
 # Server ------------------------------------------------------------------
 
 setwd("~/Documents/School/Duke/Summer 2019/Data+/")
+
+getRegionName <- function(huc) {
+  huc2Names <- tibble("01" = "New England Region", "02" = "Mid Atlantic Region", "03" = "South Atlantic-Gulf Region", 
+                      "04" = "Great Lakes Region", "05" = "Ohio Region", "06" = "Tennessee Region", 
+                      "07" = "Upper Mississippi Region", "08" = "Lower Mississippi Region", "09" = "Souris-Red-Rainy Region", 
+                      "10" = "Missouri Region", "11" = "Arkansas-White-Red Region", "12" = "Texas-Gulf Region", 
+                      "13" = "Rio Grande Region", "14" = "Upper Colorado Region", "15" = "Lower Colorado Region", 
+                      "16" = "Great Basin Region", "17" = "Pacific Northwest Region", "18" = "California Region", 
+                      "19" = "Alaska Region", "20" = "Hawaii Region", "21" = "Caribbean Region", 
+                      "22" = "South Pacific Region")
+  if (str_length(huc) == 2) {
+    return("")
+  } else {
+    return (paste0("in the ", huc2Names[substr(huc, 1, 2)]))
+  }
+}
+
 function(input, output, session) {
   
   output$wqpMap <- renderLeaflet({
@@ -32,14 +49,6 @@ function(input, output, session) {
                        "08" = "Subbasin",
                        "10" = "Watershed",
                        "12" = "Subwatershed")
-  huc2Names <- tibble("01" = "New England Region", "02" = "Mid Atlantic Region", "03" = "South Atlantic-Gulf Region", 
-                      "04" = "Great Lakes Region", "05" = "Ohio Region", "06" = "Tennessee Region", 
-                      "07" = "Upper Mississippi Region", "08" = "Lower Mississippi Region", "09" = "Souris-Red-Rainy Region", 
-                      "10" = "Missouri Region", "11" = "Arkansas-White-Red Region", "12" = "Texas-Gulf Region", 
-                      "13" = "Rio Grande Region", "14" = "Upper Colorado Region", "15" = "Lower Colorado Region", 
-                      "16" = "Great Basin Region", "17" = "Pacific Northwest Region", "18" = "California Region", 
-                      "19" = "Alaska Region", "20" = "Hawaii Region", "21" = "Caribbean Region", 
-                      "22" = "South Pacific Region")
   
   # options(opacityDim = 0, persistent = F, selected = attrs_selected(fill="toself", fillcolor = "green"))
   options(opacityDim = 0)
@@ -229,7 +238,16 @@ function(input, output, session) {
                    actionButton("back", "Take me back!", width = "100%", icon = icon("arrow-left"), style="position:absolute; top:28px")
                    )
           ),
-          tags$h3(paste0("HUC", str_length(hucSelected), ": "), hucSelected, " — ", selectedHucBound$AREASQKM, "sq. km in the ", huc2Names[substr(hucSelected, 1, 2)]),
+          fluidRow(
+            column(10,
+                   tags$h3(paste0("HUC", str_length(hucSelected), ": "),
+                           strong(hucSelected), " — ", selectedHucBound$AREASQKM,
+                           "sq. km ", getRegionName(hucSelected))
+            ),
+            column(2, 
+                    h3("Filters")
+            )
+          ),
           fluidRow(
             column(5,
               div(class="widget", 
@@ -241,16 +259,20 @@ function(input, output, session) {
                 plotlyOutput("coverage")
              )
             ),
-            column(2, 
-                    absolutePanel(id = "settings", height = 400,
-                                  
-                                  h3("Filters"),
-                                  checkboxInput("cluster", "Cluster ", F)
-                                  
-                    ))
+            column(2,
+              div(class = "widget",
+                checkboxInput("cluster", "Cluster ", F)
+              )
+            )
           ),
           # dateRangeInput("dateFilter", "Date range:"),
-          fluidRow(column(10,plotlyOutput("timeSeries")))
+          fluidRow(
+            column(10,
+              div(class = "widget",
+                plotlyOutput("timeSeries")
+              )
+            )
+          )
         )
       })
       
