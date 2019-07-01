@@ -7,14 +7,11 @@ library(plotly)
 library(leaflet)
 library(sf)
 library(rmapshaper)
-library(tmap)
 library(shinycssloaders)
 library(shinyalert)
 library(crosstalk)
 
 # Server ------------------------------------------------------------------
-
-setwd("~/Documents/School/Duke/Summer 2019/Data+/")
 
 getRegionName <- function(huc) {
   huc2Names <- tibble("01" = "New England Region", "02" = "Mid Atlantic Region", "03" = "South Atlantic-Gulf Region", 
@@ -263,7 +260,9 @@ function(input, output, session) {
             column(2,
               div(class = "widget",
                 h4("Global Settings"),
-                filter_select("selectLocationType", "Filter by monitoring location type:", key, ~ResolvedMonitoringLocationTypeName, multiple = F),
+                # filter_select("selectLocationType", "Filter by monitoring location type:", 
+                #               key, ~ResolvedMonitoringLocationTypeName, multiple = F),
+                selectizeInput("selectLocationType", "Filter by monitoring location type:", choices=locationTypeNames, width = "100%"),
                 checkboxInput("cluster", "Cluster ", F)
               )
             )
@@ -281,27 +280,27 @@ function(input, output, session) {
       
       # Loading relevant wqp data and flowline data
       wqp_path <- sprintf(
-        "~/Documents/School/Duke/Summer 2019/Data+/Datasets/wqp_Constituents/wqp_%s_indexed.gpkg", input$constInput)
+        "Datasets/wqp_Constituents/wqp_%s_indexed.gpkg", input$constInput)
       wqp_query <- sprintf(
         "SELECT * FROM wqp_%s_indexed WHERE HUCEightDigitCode LIKE '%s%%'", input$constInput, hucSelected)
       selected_wqp_data <- st_read(wqp_path, query=wqp_query)
       
       start <- Sys.time()
-      nhd_path <- "~/Documents/School/Duke/Summer 2019/Data+/Datasets/NHDPlusNationalData/Flowlines/"
+      nhd_path <- "Datasets/NHDPlusNationalData/Flowlines/"
       nhd_file_path <- paste0(nhd_path, "flowlines_simplified_", substr(hucSelected, 1, 2),".rds")
       regionFlowlines <- readRDS(nhd_file_path)
       hucFlowlines <- filter(regionFlowlines, startsWith(REACHCODE, as.character(hucSelected)))
       print(Sys.time() - start)
       
       # start <- Sys.time()
-      # nhd_path <- "~/Documents/School/Duke/Summer 2019/Data+/Datasets/NHDPlusNationalData/Flowlines_HUC8"
+      # nhd_path <- "Datasets/NHDPlusNationalData/Flowlines_HUC8"
       # hucFlowlines <- list.files(nhd_path, pattern=paste0("^HUC8_", hucSelected), full.names = T) %>%
       #   map(readRDS) %>%
       #   do.call(rbind, .)
       # print(Sys.time() - start)
       # 
       # start <- Sys.time()
-      # nhd_path <- "~/Documents/School/Duke/Summer 2019/Data+/Datasets/NHDPlusNationalData/nhdplus_flowline.gpkg"
+      # nhd_path <- "Datasets/NHDPlusNationalData/nhdplus_flowline.gpkg"
       # nhd_query <- sprintf("SELECT * FROM nhdplus_flowline WHERE REACHCODE LIKE '%s%%'", hucSelected)
       # hucFlowlines <- st_read(nhd_path, query = nhd_query)
       # print(Sys.time() - start)
@@ -309,6 +308,10 @@ function(input, output, session) {
       coverageInfo <- select(hucFlowlines, COMID, TotDASqKM, Pathlength) %>% 
         st_set_geometry(NULL)
       selected_wqp_data_coverage <- left_join(selected_wqp_data, coverageInfo, by="COMID")
+      
+      # Lists for select inputs
+      locationTypeNames <- as.list(levels(pull(selected_wqp_data_coverage, ResolvedMonitoringLocationTypeName)))
+      
       key <- highlight_key(selected_wqp_data_coverage, group = "coverage")
       # covg <- ggplot(key) + geom_point(mapping = aes(x=date, y = TotDASqKM))
       
