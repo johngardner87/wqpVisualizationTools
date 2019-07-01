@@ -227,6 +227,7 @@ function(input, output, session) {
         animation = TRUE
       )
     } else {
+      print("Rendering second page")
       output$zoomedIn <- renderUI({
         fluidPage(
           class = "details",
@@ -250,7 +251,7 @@ function(input, output, session) {
           ),
           fluidRow(
             column(5,
-              div(class="widget", 
+              div(class="widget",
                   leafletOutput(outputId = "hucDetail") %>% withSpinner(type=2, color.background="white")
               )
             ),
@@ -261,6 +262,8 @@ function(input, output, session) {
             ),
             column(2,
               div(class = "widget",
+                h4("Global Settings"),
+                filter_select("selectLocationType", "Filter by monitoring location type:", key, ~ResolvedMonitoringLocationTypeName, multiple = F),
                 checkboxInput("cluster", "Cluster ", F)
               )
             )
@@ -337,7 +340,6 @@ function(input, output, session) {
       # Cluster selection option
       observeEvent(input$cluster, {
         if(!is.null(input$cluster)) {
-          print("yep")
           clusterBool <- input$cluster
           markers <- leafletProxy("hucDetail", data = key)
           clearGroup(markers, group="markers")
@@ -410,12 +412,13 @@ function(input, output, session) {
   
   # Back button
   observeEvent(input$back, {
-    key <- NULL
-    updateCheckboxInput(session, "cluster", T)
+    # key <- NULL
+    # print(paste("Is key null:", is.null(key)))
+    # updateCheckboxInput(session, "cluster", T)
     output$zoomedIn <- NULL
-    output$timeSeries <- NULL
-    output$hucDetail <- NULL
-    output$coverage <- NULL
+    # output$timeSeries <- NULL
+    # output$hucDetail <- NULL
+    # output$coverage <- NULL
     # selectedHucBound <<- NULL
   })
 }
