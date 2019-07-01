@@ -260,14 +260,21 @@ function(input, output, session) {
             column(2,
               div(class = "widget",
                 h4("Global Settings"),
-                # filter_select("selectLocationType", "Filter by monitoring location type:", 
-                #               key, ~ResolvedMonitoringLocationTypeName, multiple = F),
-                selectizeInput("selectLocationType", "Filter by monitoring location type:", choices=locationTypeNames, width = "100%"),
+                selectizeInput("selectLocationType", "Filter by site location type:",
+                               choices=locationTypeNames, multiple=T, width = "100%", 
+                               options = list(
+                                 placeholder = 'Choose a site location type',
+                                 onInitialize = I('function() { this.setValue(""); }'))),
+                selectizeInput("selectStreamNames", "Filter by body of water:",
+                               choices=streamNames, multiple=T, width = "100%", 
+                               options = list(
+                                 placeholder = 'Choose a site location',
+                                 onInitialize = I('function() { this.setValue(""); }'))),
+                dateRangeInput("selectDates", "Filter by date:"),
                 checkboxInput("cluster", "Cluster ", F)
               )
             )
           ),
-          # dateRangeInput("dateFilter", "Date range:"),
           fluidRow(
             column(10,
               div(class = "widget",
@@ -309,10 +316,29 @@ function(input, output, session) {
         st_set_geometry(NULL)
       selected_wqp_data_coverage <- left_join(selected_wqp_data, coverageInfo, by="COMID")
       
-      # Lists for select inputs
+      # Lists and dates for select inputs
       locationTypeNames <- as.list(levels(pull(selected_wqp_data_coverage, ResolvedMonitoringLocationTypeName)))
+      streamNames <- as.list(levels(pull(selected_wqp_data_coverage, MonitoringLocationName)))
+      firstDate <- min(as.Date(pull(selected_wqp_data_coverage, date_time)))
+      lastDate <- max(as.Date(pull(selected_wqp_data_coverage, date_time)))
       
-      key <- highlight_key(selected_wqp_data_coverage, group = "coverage")
+      filtered_wqp_data_coverage <- reactive({
+        
+        # if(!is.null(input$selectLocationType) & !is.null(input$selectStreamNames)) {
+        #   print("selection_worked")
+        #   filter(selected_wqp_data_coverage, 
+        #          ResolvedMonitoringLocationTypeName == input$selectLocationType & 
+        #          MonitoringLocationName == input$selectStreamNames &
+        #          as.Date(date_time) >= input$selectDates[1] &
+        #          as.Date(date_time) <= input$selectDates[2])
+        # }
+        # else {
+        #   print("didn't_work")
+        #   selected_wqp_data_coverage
+        # }
+        selected_wqp_data_coverage
+      })
+      key <- highlight_key(filtered_wqp_data_coverage, group = "coverage")
       # covg <- ggplot(key) + geom_point(mapping = aes(x=date, y = TotDASqKM))
       
       # Secondary detail map with markers for site locations
@@ -419,9 +445,9 @@ function(input, output, session) {
     # print(paste("Is key null:", is.null(key)))
     # updateCheckboxInput(session, "cluster", T)
     output$zoomedIn <- NULL
-    # output$timeSeries <- NULL
-    # output$hucDetail <- NULL
-    # output$coverage <- NULL
+    output$timeSeries <- NULL
+    output$hucDetail <- NULL
+    output$coverage <- NULL
     # selectedHucBound <<- NULL
   })
 }
