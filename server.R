@@ -265,7 +265,7 @@ function(input, output, session) {
                                options = list(
                                  placeholder = 'Choose a site location type',
                                  onInitialize = I('function() { this.setValue(""); }'))),
-                selectizeInput("selectStreamNames", "Filter by body of water:",
+                selectizeInput("selectStreamNames", "Filter by site location name:",
                                choices=streamNames, multiple=T, width = "100%", 
                                options = list(
                                  placeholder = 'Choose a site location',
@@ -336,7 +336,16 @@ function(input, output, session) {
         #   print("didn't_work")
         #   selected_wqp_data_coverage
         # }
-        selected_wqp_data_coverage
+        filtered <- selected_wqp_data_coverage
+        # filtered <- filter(selected_wqp_data_coverage, 
+        #                    as.Date(date_time) >= input$selectDates[1] & as.Date(date_time) <= input$selectDates[2])
+        if (!is.null(input$selectLocationType)) {
+          filtered <- filter(filtered, ResolvedMonitoringLocationTypeName == input$selectLocationType)
+        }
+        if (!is.null(input$selectStreamNames)) {
+          filtered <- filter(filtered, MonitoringLocationName == input$selectStreamNames)
+        }
+        filtered
       })
       key <- highlight_key(filtered_wqp_data_coverage, group = "coverage")
       # covg <- ggplot(key) + geom_point(mapping = aes(x=date, y = TotDASqKM))
@@ -362,38 +371,32 @@ function(input, output, session) {
                       #label = hucSelected,
                       color = "black",
                       fillOpacity = 0.1,
-                      weight = 3) %>% 
-          addCircleMarkers(group="markers", radius = 3, stroke = F, color="red", opacity=0.8, fillOpacity=0.2)
+                      weight = 3)
       })
 
       # Cluster selection option
       observeEvent(input$cluster, {
-        if(!is.null(input$cluster)) {
-          clusterBool <- input$cluster
+        if(!is.null(input$cluster) && input$cluster) {
           markers <- leafletProxy("hucDetail", data = key)
           clearGroup(markers, group="markers")
-          if(clusterBool) {
-            markers %>%
-              addCircleMarkers(
-                               stroke = F,
-                               # color = "black",
-                               clusterOptions = markerClusterOptions(),
-                               # layerId = ~SiteID,
-                               group = "markers",
-                               label = ~MonitoringLocationName)
-          } else {
-            markers %>%
-              addCircleMarkers(radius = 3,
-                         stroke = F,
-                         color = "red",
-                         opacity = 0.8,
-                         fillOpacity = 0.2,
-                         group = "markers",
-                         label = ~MonitoringLocationName
-              )
-          }
+          markers %>%
+            addCircleMarkers(
+                             stroke = F,
+                             # color = "black",
+                             clusterOptions = markerClusterOptions(),
+                             # layerId = ~SiteID,
+                             group = "markers",
+                             label = ~MonitoringLocationName)
         } else {
-          print("nope")
+          markers <- leafletProxy("hucDetail", data = key)
+          clearGroup(markers, group="markers")
+          markers %>% addCircleMarkers(radius = 3,
+                           stroke = F,
+                           color = "red",
+                           opacity = 0.8,
+                           fillOpacity = 0.2,
+                           group = "markers",
+                           label = ~MonitoringLocationName)
         }
       })
 
