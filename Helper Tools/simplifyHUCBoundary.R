@@ -16,8 +16,12 @@ simplifyHUCBoundary <- function(wbd_path, level) {
     bounds <- st_read(wbd_path, layerName, quiet=TRUE)
 
     # Uses rmapshaper's ms_simplify
-    # Defaults seem to be pretty good for our applications (interactive leaflet map)
-    simplifiedBounds <- ms_simplify(bounds, sys=T)
+    # Defaults seem to be pretty good for HUC2s, HUCs 4-8 can be simplified further for our applications (interactive leaflet map)
+    if (level == 2) {
+      simplifiedBounds <- ms_simplify(bounds, sys=T, keep_shapes = T)
+    } else {
+      simplifiedBounds <- ms_simplify(bounds, sys=T, keep = 0.005, keep_shapes = T)
+    }
     
     # st_write can't write .gdb files
     st_write(simplifiedBounds, paste(layerName, ".gpkg", sep = ""), delete_layer = TRUE)
