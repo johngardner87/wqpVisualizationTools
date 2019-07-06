@@ -29,6 +29,13 @@ getRegionName <- function(huc) {
   }
 }
 
+getUniquePoints <- function(sf_data) {
+  coords <- as.data.frame(st_coordinates(sf_data))
+  sf_xy <- mutate(sf_data, X = pull(coords, X), Y = pull(coords, Y)) %>% st_set_geometry(NULL)
+  unique_points <- st_as_sf(sf_xy %>% distinct(X, Y, .keep_all=T), coords = c("X", "Y"), crs = st_crs(sf_data))
+  return(unique_points)
+}
+
 function(input, output, session) {
   
   output$wqpMap <- renderLeaflet({
@@ -38,8 +45,13 @@ function(input, output, session) {
   
   palette = "Blues" #Any pallette, I like YlOrRd or Blues
   
-  hucSelected <<- -1
-  selectedHucBound <<- NULL
+  # Variables used by throughout
+  hucSelected <- 0
+  hucLevel <- -1
+  selectedHucBound <- NULL
+  filtered_wqp_data_coverage <- NULL
+  key <- NULL
+  
   hucRegions <- tibble("02" = "",
                        "04" = "Subregion",
                        "06" = "Basin",
@@ -51,19 +63,19 @@ function(input, output, session) {
   options(opacityDim = 0)
 
   output$select <- reactive({F})
-  outputOptions(output, "select", suspendWhenHidden = FALSE)
+  outputOptions(output, "select", suspendWhenHidden = FALSE, priority = 100)
   
   # Main map ---------------------------------------------------------------
   observe({
-    hucLevel <- input$hucInput
+    hucLevel <<- input$hucInput
     # hucLevelUp <- as.numeric(hucLevel) - 2
     hucLevelUp <- 2
-    hucColumn <- paste("HUC", hucLevel, sep="")
-    constituent <- input$constInput
+    hucColumn <<- paste("HUC", hucLevel, sep="")
+    constituent <<- input$constInput
     constCol <<- paste(constituent, "MeasCount", sep="")
     
     # Load boundary data for selected HUC and HUC2 boundaries for context
-    boundaries <- paste("WBDHU", hucLevel, "Counts", ".gpkg", sep = "") %>% 
+    boundaries <<- paste("WBDHU", hucLevel, "Counts", ".gpkg", sep = "") %>% 
       paste("Datasets/WBD_Simplified/", ., sep="") %>% 
       st_read()
     
@@ -75,7 +87,7 @@ function(input, output, session) {
     
     bins <- c(0, 10, 50, 1000, 3000, 6000, 20000, 100000, Inf)
     
-    # Map panes for proper layering of UI
+    # Clearing old shapes and adding map panes for proper layering of UI
     hucMap <- leafletProxy("wqpMap", data = boundaries) %>% 
       clearShapes() %>% 
       addMapPane("larger", zIndex = 440) %>% # Region boundaries for context
@@ -95,14 +107,12 @@ function(input, output, session) {
     
     # Drawing of main polygons with coloring based on constituent selection
     if (constituent == "All") {
-      cols <- c("chlorophyllMeasCount", "docMeasCount", "secchiMeasCount", "tssMeasCount")
-      allCounts <- boundaries[cols] %>% st_set_geometry(NULL) %>% reduce(`+`)
-      boundaries <- mutate(boundaries, AllMeasCount = allCounts)
-      pal <- colorBin(palette, domain=allCounts, bins=bins)
+      
+      pal <<- colorBin(palette, domain=boundaries[["AllMeasCount"]], bins=bins)
       # pal <- colorQuantile(palette, domain=allCounts, n = 6)
       
       hucMap %>%
-        addPolygons(fillColor = ~pal(allCounts), #topo.colors(10)
+        addPolygons(fillColor = ~pal(boundaries[["AllMeasCount"]]), #topo.colors(10)
                     color = "black",
                     weight = 1,
                     opacity = 1,
@@ -121,9 +131,9 @@ function(input, output, session) {
                       textsize = "12px"
                     ),
                     options = pathOptions(pane = "main")
-        ) %>% addLegend("bottomleft", pal, values = allCounts, layerId = "legend")
+        ) %>% addLegend("bottomleft", pal, values = boundaries[["AllMeasCount"]], layerId = "legend")
     } else {
-      pal <- colorBin(palette, domain=boundaries[[constCol]], bins=bins)
+      pal <<- colorBin(palette, domain=boundaries[[constCol]], bins=bins)
       
       hucMap %>%
         addPolygons(fillColor = ~pal(boundaries[[constCol]]), #topo.colors(10)
@@ -148,61 +158,113 @@ function(input, output, session) {
         ) %>% addLegend("bottomleft", pal, boundaries[[constCol]], layerId = "legend")
     }
     
-    # HUC selection (redraws polygon with red boundary, behaves differently depending on current selection)
-    observeEvent(input$wqpMap_shape_click, {
-      
-      event <- input$wqpMap_shape_click
-      
-      if(is.null(event$id)) {                                           # If the user clicks on a boundary
-        print("boundary selected")
-      } else if (nchar(hucSelected) != as.numeric(hucLevel)) {          # If the user changes the HUC
-        output$select <- reactive({F})
-      } else if (event$id != paste(hucSelected, "Selected", sep="")) {  # If the user clicks on a new HUC
-        oldHuc <- hucSelected
-        hucSelected <<- event$id
-        selectedHucBound <<- boundaries %>% 
-          filter(.data[[hucColumn]] == hucSelected)
-        
-        selectedPoly <- leafletProxy("wqpMap", data=selectedHucBound) %>%
-          removeShape(paste(oldHuc, "Selected", sep=""))
-        
-        if(constituent == "All") {
-          selectedPoly %>%
-            addPolygons(layerId = paste(selectedHucBound[[hucColumn]], "Selected", sep=""),
-                        fillColor = ~pal(allCounts),
-                        color = "red",
-                        weight = 3,
-                        opacity = 1,
-                        label = paste(selectedHucBound$NAME, ": ", selectedHucBound$AllMeasCount, " total measurements",
-                                      sep=""),
-                        labelOptions = labelOptions(
-                          textsize = "12px"
-                        ),
-                        options = pathOptions(pane = "selections")
-            )
-        } else {
-          selectedPoly %>%
-            addPolygons(layerId = paste(selectedHucBound[[hucColumn]], "Selected", sep=""),
-                        fillColor = ~pal(selectedHucBound[[constCol]]),
-                        color = "red",
-                        weight = 3,
-                        opacity = 1,
-                        label = paste(selectedHucBound$NAME, ": ",
-                                      selectedHucBound[[constCol]], " ", constituent," measurements", sep=""),
-                        labelOptions = labelOptions(
-                          textsize = "12px"
-                        ),
-                        options = pathOptions(pane = "selections")
-            )
-        }
-        print(paste("you've selected: ", hucSelected, sep=""))
-        output$select <- reactive({T})
-      } else {                                                          # If the user clicks on the selected HUC
-        print(paste("removed:", event$id))
-        leafletProxy("wqpMap") %>% removeShape(event$id)
-        output$select <- reactive({F})
+    if (nchar(hucSelected) != as.numeric(hucLevel)) {          # If the user changes the HUC
+      print("setting to false")
+      print(paste("hucSelected length", nchar(hucSelected)))
+      print(paste("hucLevel", as.numeric(hucLevel)))
+      output$select <- reactive({F})
+    } else {                                                   # If the user changed the constituent, has to redraw selection
+      selectedPoly <- leafletProxy("wqpMap", data=selectedHucBound) %>%
+        removeShape(paste(hucSelected, "Selected", sep=""))
+      print("non-selected poly removed")
+      if(constituent == "All") {
+        selectedPoly %>%
+          addPolygons(layerId = paste(selectedHucBound[[hucColumn]], "Selected", sep=""),
+                      fillColor = ~pal(boundaries[["AllMeasCount"]]),
+                      color = "red",
+                      weight = 3,
+                      opacity = 1,
+                      label = paste(selectedHucBound$NAME, ": ", selectedHucBound$AllMeasCount, " total measurements",
+                                    sep=""),
+                      labelOptions = labelOptions(
+                        textsize = "12px"
+                      ),
+                      options = pathOptions(pane = "selections")
+          )
+      } else {
+        selectedPoly %>%
+          addPolygons(layerId = paste(selectedHucBound[[hucColumn]], "Selected", sep=""),
+                      fillColor = ~pal(selectedHucBound[[constCol]]),
+                      color = "red",
+                      weight = 3,
+                      opacity = 1,
+                      label = paste(selectedHucBound$NAME, ": ",
+                                    selectedHucBound[[constCol]], " ", constituent," measurements", sep=""),
+                      labelOptions = labelOptions(
+                        textsize = "12px"
+                      ),
+                      options = pathOptions(pane = "selections")
+          )
       }
-    })
+    }
+  })
+  
+  observe({
+    click <- input$wqpMap_shape_click
+    if(is.null(click)) {return()}
+    print("CLICK REGISTERED --------------")
+    print(click$id)
+  })
+  
+  # HUC selection (redraws polygon with red boundary, behaves differently depending on current selection)
+  observeEvent(input$wqpMap_shape_click, {
+    
+    print("NEW EVENT START -------------------------------------")
+    start <- Sys.time()
+    event <- input$wqpMap_shape_click
+    
+    if(is.null(event$id)) {                                           # If the user clicks on a boundary
+      print("boundary selected")
+      print(paste("hucSelected length", nchar(hucSelected)))
+      print(paste("hucLevel", as.numeric(hucLevel)))
+    } else if (event$id != paste(hucSelected, "Selected", sep="")) {  # If the user clicks on a new HUC
+      oldHuc <- hucSelected
+      hucSelected <<- event$id
+      selectedHucBound <<- boundaries %>% 
+        filter(.data[[hucColumn]] == hucSelected)
+      print("selected  huc loaded")
+      selectedPoly <- leafletProxy("wqpMap", data=selectedHucBound) %>%
+        removeShape(paste(oldHuc, "Selected", sep=""))
+      print("non-selected poly removed")
+      if(constituent == "All") {
+        selectedPoly %>%
+          addPolygons(layerId = paste(selectedHucBound[[hucColumn]], "Selected", sep=""),
+                      fillColor = ~pal(boundaries[["AllMeasCount"]]),
+                      color = "red",
+                      weight = 3,
+                      opacity = 1,
+                      label = paste(selectedHucBound$NAME, ": ", selectedHucBound$AllMeasCount, " total measurements",
+                                    sep=""),
+                      labelOptions = labelOptions(
+                        textsize = "12px"
+                      ),
+                      options = pathOptions(pane = "selections")
+          )
+      } else {
+        selectedPoly %>%
+          addPolygons(layerId = paste(selectedHucBound[[hucColumn]], "Selected", sep=""),
+                      fillColor = ~pal(selectedHucBound[[constCol]]),
+                      color = "red",
+                      weight = 3,
+                      opacity = 1,
+                      label = paste(selectedHucBound$NAME, ": ",
+                                    selectedHucBound[[constCol]], " ", constituent," measurements", sep=""),
+                      labelOptions = labelOptions(
+                        textsize = "12px"
+                      ),
+                      options = pathOptions(pane = "selections")
+          )
+      }
+      print(paste("you've selected: ", hucSelected, sep=""))
+      output$select <- reactive({T})
+      print("select: T")
+      print(Sys.time() - start)
+    } else {                                                          # If the user clicks on the selected HUC
+      print(paste("removed:", event$id))
+      leafletProxy("wqpMap") %>% removeShape(event$id)
+      output$select <- reactive({F})
+      print("select: F")
+    }
   })
   
   # Secondary window ---------------------------------------------------------------
@@ -233,13 +295,14 @@ function(input, output, session) {
                    tags$h1("Coverage in the ", strong(selectedHucBound$NAME), hucRegions[sprintf("%02s", str_length(hucSelected))])
                    ),
             column(2, 
-                   actionButton("back", "Take me back!", width = "100%", icon = icon("arrow-left"), style="position:absolute; top:28px")
+                   actionButton("back", "Take me back!", 
+                                width = "100%", icon = icon("arrow-left"), style="position:absolute; top:28px")
                    )
           ),
           fluidRow(
             column(10,
                    tags$h3(paste0("HUC", str_length(hucSelected), ": "),
-                           strong(hucSelected), " — ", selectedHucBound$AREASQKM,
+                           strong(hucSelected), " — ", prettyNum(selectedHucBound$AREASQKM, big.mark=","),
                            "sq. km ", getRegionName(hucSelected))
             ),
             column(2, 
@@ -259,7 +322,7 @@ function(input, output, session) {
             ),
             column(2,
               div(class = "widget",
-                h4("Global Settings"),
+                h4(class="sidebarTitles", "Global Settings"),
                 selectizeInput("selectLocationType", "Filter by site location type:",
                                choices=locationTypeNames, multiple=T, width = "100%", 
                                options = list(
@@ -268,10 +331,13 @@ function(input, output, session) {
                 selectizeInput("selectStreamNames", "Filter by site location name:",
                                choices=streamNames, multiple=T, width = "100%", 
                                options = list(
-                                 placeholder = 'Choose a site location',
-                                 onInitialize = I('function() { this.setValue(""); }'))),
-                dateRangeInput("selectDates", "Filter by date:"),
-                checkboxInput("cluster", "Cluster ", F)
+                                 placeholder = 'Choose a site location'
+                               )),
+                dateRangeInput("selectDates", "Filter by date:", start = firstDate, end = lastDate, startview = "decade"),
+                h4(class="sidebarTitles", "Measurement Site Map"),
+                checkboxInput("cluster", "Cluster", F),
+                splitLayout(checkboxInput("showHUC10", "HUC10s", F),
+                            checkboxInput("showHUC12", "HUC12s", F))
               )
             )
           ),
@@ -280,6 +346,12 @@ function(input, output, session) {
               div(class = "widget",
                 plotlyOutput("timeSeries")
               )
+            ),
+            column(2,
+                   div(class="widget",
+                      h4(class = "sidebarTitles", "Time Series"),
+                      actionButton("plotUpdate", "Redraw plots!", icon=icon("sync"), width="100%")
+                  )
             )
           )
         )
@@ -319,26 +391,16 @@ function(input, output, session) {
       # Lists and dates for select inputs
       locationTypeNames <- as.list(levels(pull(selected_wqp_data_coverage, ResolvedMonitoringLocationTypeName)))
       streamNames <- as.list(levels(pull(selected_wqp_data_coverage, MonitoringLocationName)))
-      firstDate <- min(as.Date(pull(selected_wqp_data_coverage, date_time)))
-      lastDate <- max(as.Date(pull(selected_wqp_data_coverage, date_time)))
+      selectedDates <- as.Date(pull(selected_wqp_data_coverage, date_time))
+      firstDate <- min(selectedDates)
+      lastDate <- max(selectedDates)
       
-      filtered_wqp_data_coverage <- reactive({
-        
-        # if(!is.null(input$selectLocationType) & !is.null(input$selectStreamNames)) {
-        #   print("selection_worked")
-        #   filter(selected_wqp_data_coverage, 
-        #          ResolvedMonitoringLocationTypeName == input$selectLocationType & 
-        #          MonitoringLocationName == input$selectStreamNames &
-        #          as.Date(date_time) >= input$selectDates[1] &
-        #          as.Date(date_time) <= input$selectDates[2])
-        # }
-        # else {
-        #   print("didn't_work")
-        #   selected_wqp_data_coverage
-        # }
+      filtered_wqp_data_coverage <<- reactive({
         filtered <- selected_wqp_data_coverage
-        # filtered <- filter(selected_wqp_data_coverage, 
-        #                    as.Date(date_time) >= input$selectDates[1] & as.Date(date_time) <= input$selectDates[2])
+        # if (!is.null(input$selectDates)) {
+        #   filtered <- filter(selected_wqp_data_coverage,
+        #                      as.Date(date_time) >= input$selectDates[1] & as.Date(date_time) <= input$selectDates[2])
+        # }
         if (!is.null(input$selectLocationType)) {
           filtered <- filter(filtered, ResolvedMonitoringLocationTypeName == input$selectLocationType)
         }
@@ -347,13 +409,29 @@ function(input, output, session) {
         }
         filtered
       })
-      key <- highlight_key(filtered_wqp_data_coverage, group = "coverage")
-      # covg <- ggplot(key) + geom_point(mapping = aes(x=date, y = TotDASqKM))
-      
+      filtered_unique <- reactive({
+        filtered <- selected_wqp_data_coverage
+        # if (!is.null(input$selectDates)) {
+        #   filtered <- filter(selected_wqp_data_coverage,
+        #                      as.Date(date_time) >= input$selectDates[1] & as.Date(date_time) <= input$selectDates[2])
+        # }
+        if (!is.null(input$selectLocationType)) {
+          filtered <- filter(filtered, ResolvedMonitoringLocationTypeName == input$selectLocationType)
+        }
+        if (!is.null(input$selectStreamNames)) {
+          filtered <- filter(filtered, MonitoringLocationName == input$selectStreamNames)
+        }
+        getUniquePoints(filtered)
+      })
+
+      # key <- highlight_key(filtered_wqp_data_coverage, group = "coverage")
+      map_key <- SharedData$new(filtered_unique, group = "coverage", key=~SiteID)
+      key <<- SharedData$new(filtered_wqp_data_coverage, group = "coverage", key=~SiteID)
+
       # Secondary detail map with markers for site locations
       output$hucDetail <- renderLeaflet({
         # Bounds fit continental US
-        hucDetailMap <- leaflet(key) %>% 
+        hucDetailMap <- leaflet(map_key) %>% 
           addProviderTiles(providers$Esri.WorldGrayCanvas, group = "Esri.WorldGrayCanvas",
                            options = providerTileOptions(updateWhenZooming=F, updateWhenIdle = T)) %>%
           addProviderTiles(providers$Esri.OceanBasemap, group = "Esri.OceanBasemap",
@@ -374,10 +452,21 @@ function(input, output, session) {
                       weight = 3)
       })
 
-      # Cluster selection option
-      observeEvent(input$cluster, {
+      leafletProxy("hucDetail", data=map_key) %>% 
+        addCircleMarkers(radius = 3,
+                         stroke = F,
+                         color = "red",
+                         # opacity = 0.8,
+                         # fillOpacity = 0.2,
+                         opacity = 1,
+                         fillOpacity = 1,
+                         group = "markers",
+                         label = ~MonitoringLocationName)
+      
+      # Drawing of points based on selection options
+      observeEvent(c(input$cluster, input$selectLocationType, input$selectDates, input$selectStreamNames), {
         if(!is.null(input$cluster) && input$cluster) {
-          markers <- leafletProxy("hucDetail", data = key)
+          markers <- leafletProxy("hucDetail", data = map_key)
           clearGroup(markers, group="markers")
           markers %>%
             addCircleMarkers(
@@ -388,13 +477,15 @@ function(input, output, session) {
                              group = "markers",
                              label = ~MonitoringLocationName)
         } else {
-          markers <- leafletProxy("hucDetail", data = key)
+          markers <- leafletProxy("hucDetail", data = map_key)
           clearGroup(markers, group="markers")
           markers %>% addCircleMarkers(radius = 3,
                            stroke = F,
                            color = "red",
-                           opacity = 0.8,
-                           fillOpacity = 0.2,
+                           # opacity = 0.8,
+                           # fillOpacity = 0.2,
+                           opacity = 1,
+                           fillOpacity = 1,
                            group = "markers",
                            label = ~MonitoringLocationName)
         }
@@ -404,6 +495,7 @@ function(input, output, session) {
       output$coverage <- renderPlotly({
         covg <- plot_ly(key, x=~date, y=~TotDASqKM) %>% 
           add_markers(alpha = 0.5) %>%
+          layout(xaxis=list(title = "Date"), yaxis=list(title="Upstream Catchment Area")) %>% 
           highlight("plotly_selected") %>%
           event_register("plotly_relayout") %>%
           # rangeslider() #%>% 
@@ -437,20 +529,21 @@ function(input, output, session) {
         siteValsPlot <- ggplot(key) + 
                         geom_point(mapping = aes(x=date_time, y=harmonized_value, color=harmonized_parameter)) + 
                         labs(x="Date")#,y="Chlorophyll - ug/L")
-        ggplotly(siteValsPlot, dynamicTicks = TRUE)
+        ggplotly(siteValsPlot, dynamicTicks = TRUE) %>% toWebGL()
       })
     }
   })
   
   # Back button
   observeEvent(input$back, {
-    # key <- NULL
-    # print(paste("Is key null:", is.null(key)))
-    # updateCheckboxInput(session, "cluster", T)
-    output$zoomedIn <- NULL
+    leafletProxy("hucDetail") %>% clearGroup(group="markers")
+    filtered_wqp_data_coverage <<- NULL
+    key <<- NULL
+    map_key <- NULL
     output$timeSeries <- NULL
     output$hucDetail <- NULL
     output$coverage <- NULL
+    output$zoomedIn <- NULL
     # selectedHucBound <<- NULL
   })
 }
