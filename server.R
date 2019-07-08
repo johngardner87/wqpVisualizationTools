@@ -31,6 +31,7 @@ getRegionName <- function(huc) {
 
 getUniquePoints <- function(sf_data) {
   coords <- as.data.frame(st_coordinates(sf_data))
+  if(is.null(coords)) {print("NULL COORDS")}
   sf_xy <- mutate(sf_data, X = pull(coords, X), Y = pull(coords, Y)) %>% st_set_geometry(NULL)
   unique_points <- st_as_sf(sf_xy %>% distinct(X, Y, .keep_all=T), coords = c("X", "Y"), crs = st_crs(sf_data))
   return(unique_points)
@@ -196,6 +197,7 @@ function(input, output, session) {
                       options = pathOptions(pane = "selections")
           )
       }
+      output$select <- reactive({T})
     }
   })
   
@@ -368,7 +370,11 @@ function(input, output, session) {
       nhd_path <- "Datasets/NHDPlusNationalData/Flowlines/"
       nhd_file_path <- paste0(nhd_path, "flowlines_simplified_", substr(hucSelected, 1, 2),".rds")
       regionFlowlines <- readRDS(nhd_file_path)
-      hucFlowlines <- filter(regionFlowlines, startsWith(REACHCODE, as.character(hucSelected)))
+      if (hucLevel == 2) {
+        hucFlowlines <- regionFlowlines
+      } else {
+        hucFlowlines <- filter(regionFlowlines, startsWith(REACHCODE, as.character(hucSelected))) 
+      }
       print(Sys.time() - start)
       
       # start <- Sys.time()
@@ -425,7 +431,7 @@ function(input, output, session) {
       })
 
       # key <- highlight_key(filtered_wqp_data_coverage, group = "coverage")
-      map_key <- SharedData$new(filtered_unique, group = "coverage", key=~SiteID)
+      map_key <<- SharedData$new(filtered_unique, group = "coverage", key=~SiteID)
       key <<- SharedData$new(filtered_wqp_data_coverage, group = "coverage", key=~SiteID)
 
       # Secondary detail map with markers for site locations
@@ -452,7 +458,7 @@ function(input, output, session) {
                       weight = 3)
       })
 
-      leafletProxy("hucDetail", data=map_key) %>% 
+      leafletProxy("hucDetail", data=map_key) %>%
         addCircleMarkers(radius = 3,
                          stroke = F,
                          color = "red",
@@ -465,7 +471,8 @@ function(input, output, session) {
       
       # Drawing of points based on selection options
       observeEvent(c(input$cluster, input$selectLocationType, input$selectDates, input$selectStreamNames), {
-        if(!is.null(input$cluster) && input$cluster) {
+        req(input$cluster)
+        if(input$cluster) {
           markers <- leafletProxy("hucDetail", data = map_key)
           clearGroup(markers, group="markers")
           markers %>%
