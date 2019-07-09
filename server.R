@@ -51,6 +51,7 @@ function(input, output, session) {
   hucLevel <- -1
   selectedHucBound <- NULL
   filtered_wqp_data_coverage <- NULL
+  filtered_unique <- NULL
   key <- NULL
   
   hucRegions <- tibble("02" = "",
@@ -408,24 +409,24 @@ function(input, output, session) {
         #                      as.Date(date_time) >= input$selectDates[1] & as.Date(date_time) <= input$selectDates[2])
         # }
         if (!is.null(input$selectLocationType)) {
-          filtered <- filter(filtered, ResolvedMonitoringLocationTypeName == input$selectLocationType)
+          filtered <- filter(filtered, ResolvedMonitoringLocationTypeName %in% input$selectLocationType)
         }
         if (!is.null(input$selectStreamNames)) {
-          filtered <- filter(filtered, MonitoringLocationName == input$selectStreamNames)
+          filtered <- filter(filtered, MonitoringLocationName %in% input$selectStreamNames)
         }
         filtered
       })
-      filtered_unique <- reactive({
+      filtered_unique <<- reactive({
         filtered <- selected_wqp_data_coverage
         # if (!is.null(input$selectDates)) {
         #   filtered <- filter(selected_wqp_data_coverage,
         #                      as.Date(date_time) >= input$selectDates[1] & as.Date(date_time) <= input$selectDates[2])
         # }
         if (!is.null(input$selectLocationType)) {
-          filtered <- filter(filtered, ResolvedMonitoringLocationTypeName == input$selectLocationType)
+          filtered <- filter(filtered, ResolvedMonitoringLocationTypeName %in% input$selectLocationType)
         }
         if (!is.null(input$selectStreamNames)) {
-          filtered <- filter(filtered, MonitoringLocationName == input$selectStreamNames)
+          filtered <- filter(filtered, MonitoringLocationName %in% input$selectStreamNames)
         }
         getUniquePoints(filtered)
       })
@@ -449,66 +450,39 @@ function(input, output, session) {
           addLayersControl(baseGroups = c("Esri.WorldGrayCanvas","Esri.OceanBasemap", "Esri.WorldImagery",
                                           "DarkMatter (CartoDB)"),
                            options = layersControlOptions(collapsed = TRUE, autoZIndex = T)) %>%
+          addMapPane("bounds", zIndex = 410) %>% 
+          addMapPane("points", zIndex = 420) %>% 
           addPolygons(data = selectedHucBound,
                       layerId = hucSelected,
                       group = "bounds",
+                      options = pathOptions(pane = "bounds"),
                       #label = hucSelected,
                       color = "black",
                       fillOpacity = 0.1,
-                      weight = 3)
-      })
-
-      leafletProxy("hucDetail", data=map_key) %>%
-        addCircleMarkers(radius = 3,
-                         stroke = F,
-                         color = "red",
-                         # opacity = 0.8,
-                         # fillOpacity = 0.2,
-                         opacity = 1,
-                         fillOpacity = 1,
-                         group = "markers",
-                         label = ~MonitoringLocationName)
-      
-      # Drawing of points based on selection options
-      observeEvent(c(input$cluster, input$selectLocationType, input$selectDates, input$selectStreamNames), {
-        req(input$cluster)
-        if(input$cluster) {
-          markers <- leafletProxy("hucDetail", data = map_key)
-          clearGroup(markers, group="markers")
-          markers %>%
-            addCircleMarkers(
-                             stroke = F,
-                             # color = "black",
-                             clusterOptions = markerClusterOptions(),
-                             # layerId = ~SiteID,
-                             group = "markers",
-                             label = ~MonitoringLocationName)
-        } else {
-          markers <- leafletProxy("hucDetail", data = map_key)
-          clearGroup(markers, group="markers")
-          markers %>% addCircleMarkers(radius = 3,
+                      weight = 3) %>% 
+          addCircleMarkers(radius = 3,
                            stroke = F,
                            color = "red",
+                           options = pathOptions(pane = "points"),
                            # opacity = 0.8,
                            # fillOpacity = 0.2,
                            opacity = 1,
                            fillOpacity = 1,
-                           group = "markers",
-                           label = ~MonitoringLocationName)
-        }
+                           group = "markers")
+                           #label = ~MonitoringLocationName)
       })
 
-      # Coverage plot
-      output$coverage <- renderPlotly({
-        covg <- plot_ly(key, x=~date, y=~TotDASqKM) %>% 
-          add_markers(alpha = 0.5) %>%
-          layout(xaxis=list(title = "Date"), yaxis=list(title="Upstream Catchment Area")) %>% 
-          highlight("plotly_selected") %>%
-          event_register("plotly_relayout") %>%
-          # rangeslider() #%>% 
-          toWebGL()
-      })
-      
+      # leafletProxy("hucDetail", data=map_key) %>%
+      #   addCircleMarkers(radius = 3,
+      #                    stroke = F,
+      #                    color = "red",
+      #                    # opacity = 0.8,
+      #                    # fillOpacity = 0.2,
+      #                    opacity = 1,
+      #                    fillOpacity = 1,
+      #                    group = "markers",
+      #                    label = ~MonitoringLocationName)
+
       # observeEvent(event_data("plotly_relayout"), {
       #   d <- event_data("plotly_relayout")
       #   # unfortunately, the data structure emitted is different depending on
@@ -532,12 +506,79 @@ function(input, output, session) {
       #
       # })
       
-      output$timeSeries <- renderPlotly({
-        siteValsPlot <- ggplot(key) + 
-                        geom_point(mapping = aes(x=date_time, y=harmonized_value, color=harmonized_parameter)) + 
-                        labs(x="Date")#,y="Chlorophyll - ug/L")
-        ggplotly(siteValsPlot, dynamicTicks = TRUE) %>% toWebGL()
+      output$coverage <- renderPlotly({
+        covg <- plot_ly(key, x=~date, y=~TotDASqKM) %>% 
+          add_markers() %>%
+          layout(xaxis=list(title = "Date"), yaxis=list(title="Upstream Catchment Area")) %>% 
+          highlight("plotly_selected") %>%
+          event_register("plotly_relayout") %>%
+          # rangeslider() #%>% 
+          toWebGL()
       })
+      
+      output$timeSeries <- renderPlotly({
+        # siteValsPlot <- ggplot(key) + 
+        #   geom_point(mapping = aes(x=date_time, y=harmonized_value, color=harmonized_parameter)) + 
+        #   labs(x="Date")#,y="Chlorophyll - ug/L")
+        # ggplotly(siteValsPlot, dynamicTicks = TRUE) %>% toWebGL()
+        timeSeries <- plot_ly(key, x=~date, y=~harmonized_value, color=~harmonized_parameter) %>% 
+          add_markers() %>%
+          layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit")) %>% 
+          highlight("plotly_selected")
+      })
+    }
+  })
+  
+  # Drawing of points based on selection options
+  observeEvent(c(input$cluster, input$selectLocationType, input$selectDates, input$selectStreamNames), {
+    # key.clear
+    if(!is.null(input$cluster) && input$cluster) {
+      markers <- leafletProxy("hucDetail", data = map_key)
+      clearGroup(markers, group="markers")
+      markers %>%
+        addCircleMarkers(
+          stroke = F,
+          # color = "black",
+          clusterOptions = markerClusterOptions(),
+          options = pathOptions(pane = "points"),
+          # layerId = ~SiteID,
+          group = "markers",
+          label = ~MonitoringLocationName)
+    } else {
+      markers <- leafletProxy("hucDetail", data = map_key)
+      clearGroup(markers, group="markers")
+      markers %>% addCircleMarkers(radius = 3,
+                                   stroke = F,
+                                   color = "red",
+                                   options = pathOptions(pane = "points"),
+                                   # opacity = 0.8,
+                                   # fillOpacity = 0.2,
+                                   opacity = 1,
+                                   fillOpacity = 1,
+                                   group = "markers",
+                                   label = ~MonitoringLocationName)
+    }
+  })
+  
+  observeEvent(input$showHUC10, {
+    if(is.null(input$showHUC10)) {return()}
+    if(input$showHUC10) {
+      bounds <- st_read("Datasets/WBD_Simplified/WBDHU10.gpkg", query=sprintf("SELECT * FROM WBDHU10 WHERE HUC10 LIKE '%s%%'", hucSelected))
+      leafletProxy("hucDetail", data = bounds) %>% 
+        addPolygons(group = "huc10s", color = "black", fillOpacity = 0.1, weight = 0.5, options = pathOptions(pane = "bounds"))
+    } else {
+      leafletProxy("hucDetail") %>% clearGroup(group="huc10s")
+    }
+  })
+  
+  observeEvent(input$showHUC12, {
+    if(is.null(input$showHUC12)) {return()}
+    if(input$showHUC12) {
+      bounds <- st_read("Datasets/WBD_Simplified/WBDHU12.gpkg", query=sprintf("SELECT * FROM simplified_WBDHU12 WHERE HUC12 LIKE '%s%%'", hucSelected))
+      leafletProxy("hucDetail", data = bounds) %>% 
+        addPolygons(group = "huc12s", color = "black", fillOpacity = 0.1, weight = 0.25, options = pathOptions(pane = "bounds"))
+    } else {
+      leafletProxy("hucDetail") %>% clearGroup(group="huc12s")
     }
   })
   
@@ -545,8 +586,10 @@ function(input, output, session) {
   observeEvent(input$back, {
     leafletProxy("hucDetail") %>% clearGroup(group="markers")
     filtered_wqp_data_coverage <<- NULL
+    filtered_unique <<- NULL
     key <<- NULL
-    map_key <- NULL
+    map_key <<- NULL
+    selectedHucBound <<- NULL
     output$timeSeries <- NULL
     output$hucDetail <- NULL
     output$coverage <- NULL
