@@ -36,6 +36,9 @@ Why do I have to add the Organization ID in front of my STORET site id when sear
 
 The site ids in the STORET and NWIS systems have not been harmonized (unlike the case with characteristics). Therefore, a site id may be duplicated across the two systems. Furthermore, the site id within STORET is unable to serve as a unique identifier for a site because STORET aggregates data from different organizations who have not harmonized their identifiers. Because of these reasons, the WQP has chosen to prefix the simple site id in order to make it a suitable unique identifier. 
 
+## What to do if you want to switch out the datasets
+how to harmonize the data and switch the column names
+
 ## Features
 - Shows harmonized data from WQP
 - Filters by time, location, waterbody type, watersheds, constituents, etc. 
