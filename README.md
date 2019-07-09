@@ -15,6 +15,7 @@ Besides the academia, the VizTool also see a potential use by riverkeepers, gove
 ```
 install.packages("tidyverse", "feather", "shiny", "plotly", "leaflet", "sf", "rmapshaper", "tmap", "shinycssloaders", "shinyalert")
 ```
+- Clone the repository, and download the dataset directory from `Google Drive? ` 
 - Downloading the package `(and necessary data? )` `or are we including data in the package?`
 - Setting the working directory in R
 ```
@@ -24,11 +25,7 @@ setwd("/your/working/directory")
 ## Databases used in this visualization tool
 Data used in WQP-VizTool are chemical and physical measurements held in publicly accessible government databases. Three databases are used as main sources: the [Water Quality Portal (WQP)](https://www.waterqualitydata.us/); the [National Hydrography Dataset (NHD)](https://www.usgs.gov/core-science-systems/ngp/national-hydrography/national-hydrography-dataset?qt-science_support_page_related_con=0#qt-science_support_page_related_con); and the [Watershed Boundary Dataset (WBD)](https://www.usgs.gov/core-science-systems/ngp/national-hydrography/watershed-boundary-dataset?qt-science_support_page_related_con=4#qt-science_support_page_related_con). 
 
-Maintained by the USGS and EPA, WQP has 265 million results from over 2.2 million locations collected by hundreds of government and non-government agencies. Harmonized data for total suspended solids (tss), chlorophyll-a (chl-a), dissolved organic carbon (doc), water turpidity (secchi) and site locations were imported from WQP. 
-
-WBD dataset contains spatial data of multipolygons describing watershed boundaries at all HUC levels. 
-
-In NHD dataset, spatial data describing flowlines is extensively used, as well as the numerical flowline attributes, from which the upstream catchment area data were extracted to construct the coverage plots. 
+[WQP](https://www.waterqualitydata.us/) has 265 million results from over 2.2 million locations collected by hundreds of government and non-government agencies. Harmonized data for total suspended solids (tss), chlorophyll-a (chl-a), dissolved organic carbon (doc), water turpidity (secchi) and site locations were included in WQP_VizTool. [WBD dataset](https://www.usgs.gov/core-science-systems/ngp/national-hydrography/watershed-boundary-dataset?qt-science_support_page_related_con=4#qt-science_support_page_related_con) contains spatial data of multipolygons describing watershed boundaries at all HUC levels. In [NHD dataset](https://www.usgs.gov/core-science-systems/ngp/national-hydrography/national-hydrography-dataset?qt-science_support_page_related_con=0#qt-science_support_page_related_con), spatial data describing flowlines is extensively used, as well as the numerical flowline attributes, from which the upstream catchment area data were extracted to construct the coverage plots. 
 
 ### Harmonized Data
 
@@ -38,15 +35,6 @@ The site ids in the STORET and NWIS systems have not been harmonized (unlike the
 
 ## What to do if you want to switch out the datasets
 how to harmonize the data and switch the column names
-
-## Features
-- Shows harmonized data from WQP
-- Filters by time, location, waterbody type, watersheds, constituents, etc. 
-- Shows the temporal and spatial coverage of water quality data
-- Summarizes the value of the constituent and demonstrates its trends in time series
-- ...
-
-
 
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
