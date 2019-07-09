@@ -30,8 +30,9 @@ getRegionName <- function(huc) {
 }
 
 getUniquePoints <- function(sf_data) {
+  # if(any(is.na(st_dimension(sf_data)))) {return(sf_data)}
+  if(nrow(sf_data) == 0) {return(sf_data)}
   coords <- as.data.frame(st_coordinates(sf_data))
-  if(is.null(coords)) {print("NULL COORDS")}
   sf_xy <- mutate(sf_data, X = pull(coords, X), Y = pull(coords, Y)) %>% st_set_geometry(NULL)
   unique_points <- st_as_sf(sf_xy %>% distinct(X, Y, .keep_all=T), coords = c("X", "Y"), crs = st_crs(sf_data))
   return(unique_points)
@@ -336,7 +337,8 @@ function(input, output, session) {
                                options = list(
                                  placeholder = 'Choose a site location'
                                )),
-                dateRangeInput("selectDates", "Filter by date:", start = firstDate, end = lastDate, startview = "decade"),
+                # dateRangeInput("selectDates", "Filter by date:", start = firstDate, end = lastDate, startview = "decade"),
+                sliderInput("selectDates", "Filter by date:", min = firstDate, max = lastDate, value = c(firstDate, lastDate)),
                 h4(class="sidebarTitles", "Measurement Site Map"),
                 checkboxInput("cluster", "Cluster", F),
                 splitLayout(checkboxInput("showHUC10", "HUC10s", F),
@@ -404,10 +406,10 @@ function(input, output, session) {
       
       filtered_wqp_data_coverage <<- reactive({
         filtered <- selected_wqp_data_coverage
-        # if (!is.null(input$selectDates)) {
-        #   filtered <- filter(selected_wqp_data_coverage,
-        #                      as.Date(date_time) >= input$selectDates[1] & as.Date(date_time) <= input$selectDates[2])
-        # }
+        if (!is.null(input$selectDates)) {
+          filtered <- filter(selected_wqp_data_coverage,
+                             as.Date(date_time) >= input$selectDates[1] & as.Date(date_time) <= input$selectDates[2])
+        }
         if (!is.null(input$selectLocationType)) {
           filtered <- filter(filtered, ResolvedMonitoringLocationTypeName %in% input$selectLocationType)
         }
@@ -418,10 +420,10 @@ function(input, output, session) {
       })
       filtered_unique <<- reactive({
         filtered <- selected_wqp_data_coverage
-        # if (!is.null(input$selectDates)) {
-        #   filtered <- filter(selected_wqp_data_coverage,
-        #                      as.Date(date_time) >= input$selectDates[1] & as.Date(date_time) <= input$selectDates[2])
-        # }
+        if (!is.null(input$selectDates)) {
+          filtered <- filter(selected_wqp_data_coverage,
+                             as.Date(date_time) >= input$selectDates[1] & as.Date(date_time) <= input$selectDates[2])
+        }
         if (!is.null(input$selectLocationType)) {
           filtered <- filter(filtered, ResolvedMonitoringLocationTypeName %in% input$selectLocationType)
         }
@@ -510,7 +512,7 @@ function(input, output, session) {
         covg <- plot_ly(key, x=~date, y=~TotDASqKM) %>% 
           add_markers() %>%
           layout(xaxis=list(title = "Date"), yaxis=list(title="Upstream Catchment Area")) %>% 
-          highlight("plotly_selected") %>%
+          highlight("plotly_selected", off = "plotly_deselect") %>%
           event_register("plotly_relayout") %>%
           # rangeslider() #%>% 
           toWebGL()
@@ -521,17 +523,17 @@ function(input, output, session) {
         #   geom_point(mapping = aes(x=date_time, y=harmonized_value, color=harmonized_parameter)) + 
         #   labs(x="Date")#,y="Chlorophyll - ug/L")
         # ggplotly(siteValsPlot, dynamicTicks = TRUE) %>% toWebGL()
-        timeSeries <- plot_ly(key, x=~date, y=~harmonized_value, color=~harmonized_parameter) %>% 
-          add_markers() %>%
+        timeSeries <- plot_ly(key, x=~date, y=~harmonized_value) %>% 
+          add_markers(color=~factor(harmonized_parameter)) %>%
           layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit")) %>% 
-          highlight("plotly_selected")
+          highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=TRUE))
       })
     }
   })
   
   # Drawing of points based on selection options
   observeEvent(c(input$cluster, input$selectLocationType, input$selectDates, input$selectStreamNames), {
-    # key.clear
+    req(nrow(filtered_unique()) != 0)
     if(!is.null(input$cluster) && input$cluster) {
       markers <- leafletProxy("hucDetail", data = map_key)
       clearGroup(markers, group="markers")

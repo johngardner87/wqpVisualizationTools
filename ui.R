@@ -12,12 +12,23 @@ library(shinyalert)
 
 fluidPage(
   
-  # titlePanel("Water Quality Portal"),
   class="hucMap",
   useShinyalert(),
   tags$head(
     includeCSS("styles.css")
   ),
+  
+  # Inspired from https://github.com/akl21/hbef
+  # This is here and not the the css file because for some reason the default
+  # styles for the range sliders overwrite the custom style sheet, not sure why
+  tags$style(type = "text/css", "
+    .irs-bar {border-radius: 0;}
+    .irs-bar-edge {border-radius: 0;}
+    .irs-single, .irs-bar-edge, .irs-bar, .irs-from,  .irs-to {border-radius: 0;}
+    .irs-slider.from, .irs-slider.to {border: 0px; width: 4px; height: 20px; border-radius: 0;}
+    .irs-grid-pol.small {height: 0px;}
+    .irs-grid-pol{height: 3px; background:#6C7A89;}
+  "),
   
   # Map Output
   leafletOutput(outputId = "wqpMap", height = "100%", width="100%"),

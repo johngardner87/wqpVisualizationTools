@@ -1,3 +1,4 @@
+/* Initial leaflet map */
 .hucMap {
   position: fixed;
   top:0;
@@ -8,6 +9,16 @@
   padding: 0;
 }
 
+#inputs {
+  color: white;
+  /*background-color: #001A57;*/
+  background-color: #012169;
+  padding: 0px 20px 20px 20px;
+  opacity: 0.9;
+  border-radius: 20px;
+}
+
+/* Second page */
 .details {
   position: fixed;
   background-color: #fafafa;
@@ -38,13 +49,4 @@
   height: 100%;
   margin-bottom:20px;
   margin-right:-5px;
-}
-
-#inputs {
-  color: white;
-  /*background-color: #001A57;*/
-  background-color: #012169;
-  padding: 0px 20px 20px 20px;
-  opacity: 0.9;
-  border-radius: 20px;
 }
