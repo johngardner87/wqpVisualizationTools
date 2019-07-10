@@ -5,17 +5,18 @@ logo
 Developed by a team of data scientists and environmental scientists at Duke University, WQP_VizTool is a visualization tool for the US national water quality data. Based upon R and R Shiny, it provides a user-friendly interface to **select**, **filter**, **download** and **explore the pattern** of water quality and hydrology data, by linking it to the [Water Quality Portal](https://www.waterqualitydata.us/). 
 
 ---
-## Motivation
-WQP_VizTool was created to assist ecologists in assessing data coverage on a national scale. Areas with well-covered data, both temporally and spatially, can be identified as of potential interest to be studied. Coverage is also crucial for validating the satellite remote sensing data, which is useful for estimating water quality metrics in areas without field measurements. 
-
-Besides the academia, the VizTool also see a potential use by riverkeepers, government officials, fishery managers or the general public. 
+## Motivation and target user groups
+WQP_VizTool was created to assist ecologists in assessing data coverage on a national scale. Areas with well-covered data, both temporally and spatially, can be identified as of potential interest to be studied. Coverage is also crucial for validating the satellite remote sensing data, which is useful for estimating water quality metrics in areas without field measurements. Besides the academia, the VizTool also see a potential use by riverkeepers, government officials, fishery managers or the general public. 
 
 ## Installation
 - Install necessary libraries in R
 ```
 install.packages("tidyverse", "feather", "shiny", "plotly", "leaflet", "sf", "rmapshaper", "tmap", "shinycssloaders", "shinyalert")
 ```
-- Clone the repository, and download the dataset directory from `Google Drive? ` 
+- Clone the repository, 
+- 
+- and download the dataset directory from `Google Drive? `, and save the dataset directory in the 
+- 
 - Downloading the package `(and necessary data? )` `or are we including data in the package?`
 - Setting the working directory in R
 ```
@@ -36,12 +37,15 @@ The site ids in the STORET and NWIS systems have not been harmonized (unlike the
 ## What to do if you want to switch out the datasets
 how to harmonize the data and switch the column names
 
-## Contributing
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+## What to do to add functionality
 
-## Copyright and licensing information
+## What to do to add water quality parameters
+
+## Adding plots and graphs of your own design
+
+---
 ## Contact information for the programmer
-## Known bugs
+## Known bugs and 
 ## Credits and acknowledgments
 `cite the proposal`
 `give the names for the team`
