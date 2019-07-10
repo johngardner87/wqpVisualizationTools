@@ -14,10 +14,10 @@ Data used in WQP-VizTool are chemical and physical measurements held in publicly
 
 ### Harmonized Data
 Harmonized WQP data is used in this visualization tool as default, which is comprised of total suspended solids (tss), chlorophyll-a (chl-a), dissolved organic carbon (doc), water turpidity (secchi). These data are included for their detectablity by remote sensing satellites. 
+**What is harmonization?**
+Harmonization is the process of bringing together data of varying file formats, naming conventions, and columns, and transforming it into one cohesive data set. Especially in the case of WQP data, harmonization includes merging measurements of the same constituent coming from different agencies and institutions, converting the different systems of unit, changing the column names, and unifying the location data of the sampling sites with the measurements. 
 
-Why do I have to add the Organization ID in front of my STORET site id when searching?
-
-The site ids in the STORET and NWIS systems have not been harmonized (unlike the case with characteristics). Therefore, a site id may be duplicated across the two systems. Furthermore, the site id within STORET is unable to serve as a unique identifier for a site because STORET aggregates data from different organizations who have not harmonized their identifiers. Because of these reasons, the WQP has chosen to prefix the simple site id in order to make it a suitable unique identifier. 
+For the script of harmonization, please see [code](). 
 
 ## Installation
 - Install necessary libraries in R
@@ -37,16 +37,14 @@ setwd("/your/working/directory")
         - Run script to split the dataset
         - Run `server.R` 
         - 
-- 
 
-## What to do if you want to switch out the datasets
+## What to do if you want to switch to datasets of your choice? 
 how to harmonize the data and switch the column names
+### What to do to add water quality parameters
 
-## What to do to add functionality
-
-## What to do to add water quality parameters
-
-## Adding plots and graphs of your own design
+---
+## What to do to add plots and graphs of your own design in the visualization process? 
+Add tabs? 
 
 ---
 ## Contact information for the programmer
