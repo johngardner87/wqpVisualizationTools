@@ -42,7 +42,12 @@ function(input, output, session) {
   
   output$wqpMap <- renderLeaflet({
     # Bounds fit continental US
-    leaflet() %>% addProviderTiles(providers$Esri.WorldGrayCanvas) %>% fitBounds(-100, 25, -75, 55) 
+    leaflet() %>% 
+      addProviderTiles(providers$Esri.WorldGrayCanvas, group = "Esri.WorldGrayCanvas") %>% 
+      addProviderTiles(providers$Esri.OceanBasemap, group = "Esri.OceanBasemap") %>%  #options = providerTileOptions(updateWhenZooming=F, updateWhenIdle = T)) %>%
+      addLayersControl(baseGroups = c("Esri.WorldGrayCanvas","Esri.OceanBasemap"),
+                       options = layersControlOptions(collapsed = TRUE, autoZIndex = T)) %>%
+      fitBounds(-100, 25, -75, 55) 
   })
   
   palette = "Blues" #Any pallette, I like YlOrRd or Blues
@@ -117,13 +122,13 @@ function(input, output, session) {
       hucMap %>%
         addPolygons(fillColor = ~pal(boundaries[["AllMeasCount"]]), #topo.colors(10)
                     color = "black",
-                    weight = 1,
+                    weight = 0.5,
                     opacity = 1,
                     fillOpacity = 0.7,
                     highlight = highlightOptions(
                       weight = 2,
                       color = "black",
-                      fillOpacity = 1,
+                      fillOpacity = 0,
                       bringToFront = TRUE,
                       sendToBack = TRUE),
                     label = paste(boundaries$NAME, ": ", boundaries$AllMeasCount, " total measurements", sep=""),
@@ -141,13 +146,13 @@ function(input, output, session) {
       hucMap %>%
         addPolygons(fillColor = ~pal(boundaries[[constCol]]), #topo.colors(10)
                     color = "black",
-                    weight = 1,
+                    weight = 0.5,
                     opacity = 1,
                     fillOpacity = 0.7,
                     highlight = highlightOptions(
                       weight = 2,
                       color = "black",
-                      fillOpacity = 1,
+                      fillOpacity = 0.2,
                       bringToFront = TRUE,
                       sendToBack = TRUE),
                     label = paste(boundaries$NAME, ": ", boundaries[[constCol]], " ", constituent," measurements", sep=""),
@@ -533,7 +538,15 @@ function(input, output, session) {
   
   # Drawing of points based on selection options
   observeEvent(c(input$cluster, input$selectLocationType, input$selectDates, input$selectStreamNames), {
+    
+    #Fix for crosstalk / leaflet issue when filter selects zero points
     req(nrow(filtered_unique()) != 0)
+    
+    # Fix for crosstalk / leaflet attempts to filter after a plot-based selection was made
+    # Doesn't actually work
+    key$clearSelection()
+    map_key$clearSelection("hucDetail")
+    
     if(!is.null(input$cluster) && input$cluster) {
       markers <- leafletProxy("hucDetail", data = map_key)
       clearGroup(markers, group="markers")
@@ -591,7 +604,6 @@ function(input, output, session) {
     filtered_unique <<- NULL
     key <<- NULL
     map_key <<- NULL
-    selectedHucBound <<- NULL
     output$timeSeries <- NULL
     output$hucDetail <- NULL
     output$coverage <- NULL
