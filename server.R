@@ -43,9 +43,14 @@ function(input, output, session) {
   output$wqpMap <- renderLeaflet({
     # Bounds fit continental US
     leaflet() %>% 
+      addProviderTiles(providers$Esri.WorldTopoMap, group = "Esri.WorldTopoMap") %>%
+      addProviderTiles(providers$Esri.OceanBasemap, group = "Esri.OceanBasemap") %>%
       addProviderTiles(providers$Esri.WorldGrayCanvas, group = "Esri.WorldGrayCanvas") %>% 
-      addProviderTiles(providers$Esri.OceanBasemap, group = "Esri.OceanBasemap") %>%  #options = providerTileOptions(updateWhenZooming=F, updateWhenIdle = T)) %>%
-      addLayersControl(baseGroups = c("Esri.WorldGrayCanvas","Esri.OceanBasemap"),
+      # addProviderTiles(providers$CartoDB.DarkMatter, group = "DarkMatter (CartoDB)") %>%
+      addProviderTiles(providers$Esri.WorldImagery, group = "Esri.WorldImagery") %>%
+      # options = providerTileOptions(updateWhenZooming=F, updateWhenIdle = T)) %>%
+      addLayersControl(baseGroups = c("Esri.WorldTopoMap", "Esri.OceanBasemap", "Esri.WorldGrayCanvas", 
+                                      "Esri.WorldImagery"), # , "DarkMatter (CartoDB)"),
                        options = layersControlOptions(collapsed = TRUE, autoZIndex = T)) %>%
       fitBounds(-100, 25, -75, 55) 
   })
@@ -354,7 +359,11 @@ function(input, output, session) {
           fluidRow(
             column(10,
               div(class = "widget",
-                plotlyOutput("timeSeries")
+                  tabsetPanel(type = "tabs", 
+                              tabPanel("Time Series", plotlyOutput("timeSeries")), 
+                              tabPanel("Histogram"),
+                              tabPanel("Annual Trend")
+                  )
               )
             ),
             column(2,
@@ -446,16 +455,18 @@ function(input, output, session) {
       output$hucDetail <- renderLeaflet({
         # Bounds fit continental US
         hucDetailMap <- leaflet(map_key) %>% 
-          addProviderTiles(providers$Esri.WorldGrayCanvas, group = "Esri.WorldGrayCanvas",
+          addProviderTiles(providers$Esri.WorldTopoMap, group = "Esri.WorldTopoMap", 
                            options = providerTileOptions(updateWhenZooming=F, updateWhenIdle = T)) %>%
           addProviderTiles(providers$Esri.OceanBasemap, group = "Esri.OceanBasemap",
                            options = providerTileOptions(updateWhenZooming=F, updateWhenIdle = T)) %>%
-          addProviderTiles(providers$CartoDB.DarkMatter, group = "DarkMatter (CartoDB)",
+          addProviderTiles(providers$Esri.WorldGrayCanvas, group = "Esri.WorldGrayCanvas",
                            options = providerTileOptions(updateWhenZooming=F, updateWhenIdle = T)) %>%
+          # addProviderTiles(providers$CartoDB.DarkMatter, group = "DarkMatter (CartoDB)",
+          #                  options = providerTileOptions(updateWhenZooming=F, updateWhenIdle = T)) %>%
           addProviderTiles(providers$Esri.WorldImagery, group = "Esri.WorldImagery",
                            options = providerTileOptions(updateWhenZooming=F, updateWhenIdle = T)) %>%
-          addLayersControl(baseGroups = c("Esri.WorldGrayCanvas","Esri.OceanBasemap", "Esri.WorldImagery",
-                                          "DarkMatter (CartoDB)"),
+          addLayersControl(baseGroups = c("Esri.WorldTopoMap", "Esri.OceanBasemap", "Esri.WorldGrayCanvas", 
+                                          "Esri.WorldImagery"), #, "DarkMatter (CartoDB)"),
                            options = layersControlOptions(collapsed = TRUE, autoZIndex = T)) %>%
           addMapPane("bounds", zIndex = 410) %>% 
           addMapPane("points", zIndex = 420) %>% 
