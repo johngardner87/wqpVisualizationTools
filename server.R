@@ -357,14 +357,13 @@ function(input, output, session) {
             )
           ),
           fluidRow(
-            # tabsetPanel(type = "tabs",
-            #             tabPanel("Plot"), #, plotOutput("plot")),
-            #             tabPanel("Summary"), #, verbatimTextOutput("summary")),
-            #             tabPanel("Table"), #, tableOutput("table"))
-            # ),
             column(10,
               div(class = "widget",
-                plotlyOutput("timeSeries")
+                  tabsetPanel(type = "tabs", 
+                              tabPanel("Time Series", plotlyOutput("timeSeries")), 
+                              tabPanel("Histogram"),
+                              tabPanel("Annual Trend")
+                  )
               )
             ),
             column(2,
