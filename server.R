@@ -361,15 +361,21 @@ function(input, output, session) {
               div(class = "widget",
                   tabsetPanel(type = "tabs", 
                               tabPanel("Time Series", plotlyOutput("timeSeries")), 
-                              tabPanel("Histogram"),
+                              tabPanel("Histogram", plotlyOutput("histogram")),
                               tabPanel("Annual Trend")
                   )
               )
             ),
             column(2,
                    div(class="widget",
-                      h4(class = "sidebarTitles", "Time Series"),
+                      h4(class = "sidebarTitles", "Measurement Plots"),
                       actionButton("plotUpdate", "Redraw plots!", icon=icon("sync"), width="100%")
+                      # selectizeInput("selectConstituent", "Filter by constituent:", 
+                      #                choices = c("Chlorophyll" = "chlorophyll", 
+                      #                            "Dissolved Organic Carbon (doc)" = "doc", 
+                      #                            "Turbidity (secchi)" = "secchi", 
+                      #                            "Total Suspended Solids (tss)" = "tss"),
+                      #                multiple=T, width="100%")
                   )
             )
           )
@@ -546,7 +552,9 @@ function(input, output, session) {
       })
       
       output$histogram <- renderPlotly({
-        histogram <- plot_ly(key, x=~harmonized_value) %>% add_histogram()
+        histogram <- plot_ly(key, x=~harmonized_value) %>% 
+          add_histogram(color=~harmonized_parameter) %>% 
+          layout(xaxis=list(title="Measurement Value"), yaxis=list(title="Measurement Count"))
       })
     }
   })

@@ -48,7 +48,7 @@ fluidPage(
                             label = "Constituent",
                             choices = c("All", 
                                         "Chlorophyll" = "chlorophyll", 
-                                        "Dissolved Oxygen Concentration (DOC)" = "doc", 
+                                        "Dissolved Organic Carbon (doc)" = "doc", 
                                         "Turbidity (secchi)" = "secchi", 
                                         "Total Suspended Solids (tss)" = "tss"),
                             multiple = F,
