@@ -27,7 +27,7 @@ fluidPage(
     .irs-single, .irs-bar-edge, .irs-bar, .irs-from,  .irs-to {border-radius: 0;}
     .irs-slider.from, .irs-slider.to {border: 0px; width: 4px; height: 20px; border-radius: 0;}
     .irs-grid-pol.small {height: 0px;}
-    .irs-grid-pol{height: 3px; background:#6C7A89;}
+    .irs-grid-pol{height: 3px;}
   "),
   
   # Map Output

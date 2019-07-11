@@ -530,8 +530,12 @@ function(input, output, session) {
         # ggplotly(siteValsPlot, dynamicTicks = TRUE) %>% toWebGL()
         timeSeries <- plot_ly(key, x=~date, y=~harmonized_value) %>% 
           add_markers(color=~factor(harmonized_parameter)) %>%
-          layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit")) %>% 
+          layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit", type="log")) %>% 
           highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=TRUE))
+      })
+      
+      output$histogram <- renderPlotly({
+        histogram <- plot_ly(key, x=~harmonized_value) %>% add_histogram()
       })
     }
   })
