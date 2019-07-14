@@ -32,22 +32,24 @@ wqpJoin <- function(dir, constituents, shape = FALSE) {
   locations_filtered <- filter(wqp_locations, Constituent %in% constituents)
   
   # Now each measurement value is matched with corresponding location info from locations variable
-  measByLocations <- left_join(measurements_filtered, locations_filtered, by = c("SiteID" = "MonitoringLocationIdentifier"))
-  measByLocationsNoNA <- na.omit(measByLocations, cols=c("LatitudeMeasure", "LongitudeMeasure"))
-  
+  measByLocations <- left_join(measurements_filtered, locations_filtered, by = c("SiteID" = "MonitoringLocationIdentifier")) %>% 
+    drop_na(LatitudeMeasure, LongitudeMeasure)
+
   fileName <- paste(constituents, collapse="_") %>% 
     paste("wqp", . , sep="_")
   
   if (shape) {
     # Make geometry out of latitude, longitude points
-    measByLocGeoms <- st_as_sf(measByLocationsNoNA, coords = c("LongitudeMeasure", "LatitudeMeasure"), crs=4269)
+    measByLocGeoms <- st_as_sf(measByLocations, coords = c("LongitudeMeasure", "LatitudeMeasure"), crs=4269)
     st_write(measByLocGeoms, paste(fileName, ".gpkg", sep=""))
   } else {
-    write_csv(measByLocationsNoNA, paste(fileName, ".csv", sep=""))
+    write_csv(measByLocations, paste(fileName, ".csv", sep=""))
   }
   
 }
 
-directory = "~/Documents/School/Duke/Summer 2019/Data+/"
+directory = ""
+wqpJoin(directory, "chlorophyll", T)
+wqpJoin(directory, "tss", T)
 wqpJoin(directory, "doc", T)
 wqpJoin(directory, "secchi", T)

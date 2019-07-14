@@ -421,8 +421,8 @@ function(input, output, session) {
       locationTypeNames <- as.list(levels(pull(selected_wqp_data_coverage, ResolvedMonitoringLocationTypeName)))
       streamNames <- as.list(levels(pull(selected_wqp_data_coverage, MonitoringLocationName)))
       selectedDates <- as.Date(pull(selected_wqp_data_coverage, date_time))
-      firstDate <- min(selectedDates)
-      lastDate <- max(selectedDates)
+      firstDate <- min(selectedDates, na.rm = T)
+      lastDate <- max(selectedDates, na.rm = T)
       
       filtered_wqp_data_coverage <<- reactive({
         filtered <- selected_wqp_data_coverage
