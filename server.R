@@ -533,7 +533,7 @@ function(input, output, session) {
       output$coverage <- renderPlotly({
         covg <- plot_ly(key, x=~date, y=~TotDASqKM) %>% 
           add_markers() %>%
-          layout(xaxis=list(title = "Date"), yaxis=list(title="Upstream Catchment Area")) %>% 
+          layout(xaxis=list(title = "Date"), yaxis=list(title="Upstream Catchment Area", type = "log")) %>% 
           highlight("plotly_selected", off = "plotly_deselect") %>%
           event_register("plotly_relayout") %>%
           # rangeslider() #%>% 
@@ -547,14 +547,14 @@ function(input, output, session) {
         # ggplotly(siteValsPlot, dynamicTicks = TRUE) %>% toWebGL()
         timeSeries <- plot_ly(key, x=~date, y=~harmonized_value) %>% 
           add_markers(color=~factor(harmonized_parameter)) %>%
-          layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit", type="log")) %>% 
-          highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=TRUE))
+          layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit", type="log"), showlegend = T) %>% 
+          highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T))
       })
       
       output$histogram <- renderPlotly({
         histogram <- plot_ly(key, x=~harmonized_value) %>% 
           add_histogram(color=~harmonized_parameter) %>% 
-          layout(xaxis=list(title="Measurement Value"), yaxis=list(title="Measurement Count"))
+          layout(xaxis=list(title="Measurement Value"), yaxis=list(title="Measurement Count"), showlegend = T)
       })
     }
   })
