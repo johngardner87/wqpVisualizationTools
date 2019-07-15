@@ -38,6 +38,14 @@ getUniquePoints <- function(sf_data) {
   return(unique_points)
 }
 
+getBins <- function(hucLevel) {
+  if(hucLevel == 2) {
+    return(c(0, 1000, 10000, 100000, 250000, 500000, 1000000, 2000000, Inf))
+  } else {
+    return(c(0, 10, 50, 1000, 3000, 6000, 20000, 100000, Inf))
+  }
+}
+
 function(input, output, session) {
   
   output$wqpMap <- renderLeaflet({
@@ -98,7 +106,7 @@ function(input, output, session) {
         st_read()
     }
     
-    bins <- c(0, 10, 50, 1000, 3000, 6000, 20000, 100000, Inf)
+    bins <- getBins(hucLevel)
     
     # Clearing old shapes and adding map panes for proper layering of UI
     hucMap <- leafletProxy("wqpMap", data = boundaries) %>% 
@@ -421,8 +429,9 @@ function(input, output, session) {
       locationTypeNames <- as.list(levels(pull(selected_wqp_data_coverage, ResolvedMonitoringLocationTypeName)))
       streamNames <- as.list(levels(pull(selected_wqp_data_coverage, MonitoringLocationName)))
       selectedDates <- as.Date(pull(selected_wqp_data_coverage, date_time))
-      firstDate <- min(selectedDates, na.rm = T)
-      lastDate <- max(selectedDates, na.rm = T)
+      #Filter out unwanted dates
+      firstDate <- max(c(min(selectedDates, na.rm = T), as.Date("1930-01-01"))) #Earliest date or 1930, whichever is later
+      lastDate <- min(c(max(selectedDates, na.rm = T), as.Date("2019-04-23"))) #Latest date or 2019, whichever is earlier
       
       filtered_wqp_data_coverage <<- reactive({
         filtered <- selected_wqp_data_coverage
