@@ -540,7 +540,7 @@ function(input, output, session) {
       # })
       
       output$coverage <- renderPlotly({
-        covg <- plot_ly(key, x=~date, y=~TotDASqKM, text=~MonitoringLocationNameq) %>% 
+        covg <- plot_ly(key, x=~date, y=~TotDASqKM, text=~MonitoringLocationName) %>% 
           add_markers(color=~harmonized_parameter) %>%
           layout(xaxis=list(title = "Date"), yaxis=list(title="Upstream Catchment Area", type = "log")) %>% 
           highlight("plotly_selected", off = "plotly_deselect") %>%
