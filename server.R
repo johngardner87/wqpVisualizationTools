@@ -42,7 +42,7 @@ getBins <- function(hucLevel) {
   if(hucLevel == 2) {
     return(c(0, 1000, 10000, 100000, 250000, 500000, 1000000, 2000000, Inf))
   } else {
-    return(c(0, 10, 50, 1000, 3000, 6000, 20000, 100000, Inf))
+    return(c(0, 10, 50, 1000, 2000, 5000, 20000, 100000, Inf))
   }
 }
 
@@ -369,8 +369,8 @@ function(input, output, session) {
               div(class = "widget",
                   tabsetPanel(type = "tabs", 
                               tabPanel("Time Series", plotlyOutput("timeSeries")), 
-                              tabPanel("Histogram", plotlyOutput("histogram")),
-                              tabPanel("Annual Trend")
+                              tabPanel("Histogram", plotlyOutput("histogram"))
+                              # tabPanel("Annual Trend")
                   )
               )
             ),
@@ -446,7 +446,7 @@ function(input, output, session) {
           filtered <- filter(filtered, MonitoringLocationName %in% input$selectStreamNames)
         }
         filtered
-      })
+      }) %>% debounce(1000)
       filtered_unique <<- reactive({
         filtered <- selected_wqp_data_coverage
         if (!is.null(input$selectDates)) {
@@ -460,7 +460,7 @@ function(input, output, session) {
           filtered <- filter(filtered, MonitoringLocationName %in% input$selectStreamNames)
         }
         getUniquePoints(filtered)
-      })
+      }) %>% debounce(1000)
 
       # key <- highlight_key(filtered_wqp_data_coverage, group = "coverage")
       map_key <<- SharedData$new(filtered_unique, group = "coverage", key=~SiteID)
@@ -540,8 +540,8 @@ function(input, output, session) {
       # })
       
       output$coverage <- renderPlotly({
-        covg <- plot_ly(key, x=~date, y=~TotDASqKM) %>% 
-          add_markers() %>%
+        covg <- plot_ly(key, x=~date, y=~TotDASqKM, text=~MonitoringLocationNameq) %>% 
+          add_markers(color=~harmonized_parameter) %>%
           layout(xaxis=list(title = "Date"), yaxis=list(title="Upstream Catchment Area", type = "log")) %>% 
           highlight("plotly_selected", off = "plotly_deselect") %>%
           event_register("plotly_relayout") %>%
@@ -562,7 +562,7 @@ function(input, output, session) {
       
       output$histogram <- renderPlotly({
         histogram <- plot_ly(key, x=~harmonized_value) %>% 
-          add_histogram(color=~harmonized_parameter) %>% 
+          add_histogram(color=~harmonized_parameter, xbins = list(start = 0, size = 10)) %>% 
           layout(xaxis=list(title="Measurement Value"), yaxis=list(title="Measurement Count"), showlegend = T)
       })
     }
