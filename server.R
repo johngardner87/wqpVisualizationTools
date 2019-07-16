@@ -318,7 +318,7 @@ function(input, output, session) {
                    ),
             column(2, 
                    actionButton("back", "Take me back!", 
-                                width = "100%", icon = icon("arrow-left"), style="position:absolute; top:28px")
+                                width = "100%", icon = icon("arrow-left"), style="width:100%, position:absolute; top:28px")
                    )
           ),
           fluidRow(
@@ -377,7 +377,9 @@ function(input, output, session) {
             column(2,
                    div(class="widget",
                       h4(class = "sidebarTitles", "Measurement Plots"),
-                      actionButton("plotUpdate", "Redraw plots!", icon=icon("sync"), width="100%")
+                      selectizeInput("timeSeriesLog", "Y-Axis: ", choices=c("Linear", "Log"), multiple = F, width = "100%"),
+                      downloadButton("dl", "Download filtered data", style="width:100%")
+                      # actionButton("plotUpdate", "Redraw plots!", icon=icon("sync"), width="100%")
                       # selectizeInput("selectConstituent", "Filter by constituent:", 
                       #                choices = c("Chlorophyll" = "chlorophyll", 
                       #                            "Dissolved Organic Carbon (doc)" = "doc", 
@@ -554,10 +556,17 @@ function(input, output, session) {
         #   geom_point(mapping = aes(x=date_time, y=harmonized_value, color=harmonized_parameter)) + 
         #   labs(x="Date")#,y="Chlorophyll - ug/L")
         # ggplotly(siteValsPlot, dynamicTicks = TRUE) %>% toWebGL()
-        timeSeries <- plot_ly(key, x=~date, y=~harmonized_value) %>% 
-          add_markers(color=~factor(harmonized_parameter)) %>%
-          layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit", type="log"), showlegend = T) %>% 
-          highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T))
+        if(input$timeSeriesLog == "Log") {
+          timeSeries <- plot_ly(key, x=~date, y=~harmonized_value) %>% 
+            add_markers(color=~factor(harmonized_parameter)) %>%
+            layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit", type="log"), showlegend = T) %>% 
+            highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T))
+        } else {
+          timeSeries <- plot_ly(key, x=~date, y=~harmonized_value) %>% 
+            add_markers(color=~factor(harmonized_parameter)) %>%
+            layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit"), showlegend = T) %>% 
+            highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T))
+        }
       })
       
       output$histogram <- renderPlotly({
@@ -565,6 +574,17 @@ function(input, output, session) {
           add_histogram(color=~harmonized_parameter, xbins = list(start = 0, size = 10)) %>% 
           layout(xaxis=list(title="Measurement Value"), yaxis=list(title="Measurement Count"), showlegend = T)
       })
+      
+      output$dl <- downloadHandler(
+        filename = function() {
+          paste0(format(Sys.Date(), "%Y_%m_%d"), "_HUC", hucSelected, "_filtered.csv")
+        },
+        content = function(file) {
+          data <- filtered_wqp_data_coverage() %>% cbind(., st_coordinates(.)) %>% 
+            rename(LongitudeMeasure = X, LatitudeMeasure = Y) %>% st_set_geometry(NULL)
+          write.csv(data, file, row.names = F)
+        }
+      )
     }
   })
   
