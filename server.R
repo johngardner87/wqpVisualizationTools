@@ -48,6 +48,9 @@ getBins <- function(hucLevel) {
 
 function(input, output, session) {
   
+  output$select <- reactive({F})
+  output$showCoverage <- reactive({F})
+  
   output$wqpMap <- renderLeaflet({
     # Bounds fit continental US
     leaflet() %>% 
@@ -60,8 +63,10 @@ function(input, output, session) {
       addLayersControl(baseGroups = c("Esri.WorldTopoMap", "Esri.OceanBasemap", "Esri.WorldGrayCanvas", 
                                       "Esri.WorldImagery"), # , "DarkMatter (CartoDB)"),
                        options = layersControlOptions(collapsed = TRUE, autoZIndex = T)) %>%
-      fitBounds(-100, 25, -75, 55) 
+      fitBounds(-125, 25, -75, 55) 
   })
+  
+  output$selectedHUCName <- renderText("Select a watershed...")
   
   palette = "Blues" #Any pallette, I like YlOrRd or Blues
   
@@ -82,9 +87,8 @@ function(input, output, session) {
   
   # options(opacityDim = 0, persistent = F, selected = attrs_selected(fill="toself", fillcolor = "green"))
   options(opacityDim = 0)
-
-  output$select <- reactive({F})
-  outputOptions(output, "select", suspendWhenHidden = FALSE, priority = 100)
+  outputOptions(output, "select", suspendWhenHidden = FALSE, priority = 1)
+  outputOptions(output, "showCoverage", suspendWhenHidden = FALSE, priority = 1)
   
   # Main map ---------------------------------------------------------------
   observe({
@@ -254,6 +258,9 @@ function(input, output, session) {
       hucSelected <<- event$id
       selectedHucBound <<- boundaries %>% 
         filter(.data[[hucColumn]] == hucSelected)
+      output$select <- reactive({T})
+      output$showCoverage <- reactive({T})
+      print("select: T")
       print("selected  huc loaded")
       selectedPoly <- leafletProxy("wqpMap", data=selectedHucBound) %>%
         removeShape(paste(oldHuc, "Selected", sep=""))
@@ -298,13 +305,51 @@ function(input, output, session) {
           )
       }
       print(paste("you've selected: ", hucSelected, sep=""))
-      output$select <- reactive({T})
-      print("select: T")
+      output$selectedHUCName <- renderText(paste(selectedHucBound$NAME, hucRegions[sprintf("%02s", str_length(hucSelected))]))
       print(Sys.time() - start)
+      
+      if(!is.null(selectedHucBound[[constCol]]) && selectedHucBound[[constCol]] != 0) {
+        
+        # -------------- LOADING IN WQP AND NHD DATA
+        # Loading relevant wqp data and flowline data
+        wqp_path <- sprintf(
+          "Datasets/wqp_Constituents/wqp_%s_indexed.gpkg", input$constInput)
+        wqp_query <- sprintf(
+          "SELECT * FROM wqp_%s_indexed WHERE HUCEightDigitCode LIKE '%s%%'", input$constInput, hucSelected)
+        selected_wqp_data <- st_read(wqp_path, query=wqp_query)
+        
+        start <- Sys.time()
+        nhd_path <- "Datasets/NHDPlusNationalData/Flowlines/"
+        nhd_file_path <- paste0(nhd_path, "flowlines_simplified_", substr(hucSelected, 1, 2),".rds")
+        regionFlowlines <- readRDS(nhd_file_path)
+        if (hucLevel == 2) {
+          hucFlowlines <- regionFlowlines
+        } else {
+          hucFlowlines <- filter(regionFlowlines, startsWith(REACHCODE, as.character(hucSelected))) 
+        }
+        print(Sys.time() - start)
+        
+        coverageInfo <- select(hucFlowlines, COMID, TotDASqKM, Pathlength) %>% 
+          st_set_geometry(NULL)
+        selected_wqp_data_coverage <<- left_join(selected_wqp_data, coverageInfo, by="COMID")
+        
+        coverage_properRange <- selected_wqp_data_coverage %>% 
+          filter(date_time > as.Date("1930-01-01") & date_time < as.Date("2018-04-23")) %>% 
+          filter(TotDASqKM > 0)
+        # ------------- END LOADING IN WQP AND NHD DATA
+        
+        output$coverage1 <- renderPlot({
+          ggplot(coverage_properRange, aes(x = date, y = TotDASqKM)) +
+            geom_point() + scale_y_log10()
+        })
+      } else {
+        output$coverage1 <- NULL
+      }
     } else {                                                          # If the user clicks on the selected HUC
       print(paste("removed:", event$id))
       leafletProxy("wqpMap") %>% removeShape(event$id)
       output$select <- reactive({F})
+      output$showCoverage <- reactive({F})
       print("select: F")
     }
   })
@@ -411,41 +456,6 @@ function(input, output, session) {
           )
         )
       })
-      
-      # Loading relevant wqp data and flowline data
-      wqp_path <- sprintf(
-        "Datasets/wqp_Constituents/wqp_%s_indexed.gpkg", input$constInput)
-      wqp_query <- sprintf(
-        "SELECT * FROM wqp_%s_indexed WHERE HUCEightDigitCode LIKE '%s%%'", input$constInput, hucSelected)
-      selected_wqp_data <- st_read(wqp_path, query=wqp_query)
-      
-      start <- Sys.time()
-      nhd_path <- "Datasets/NHDPlusNationalData/Flowlines/"
-      nhd_file_path <- paste0(nhd_path, "flowlines_simplified_", substr(hucSelected, 1, 2),".rds")
-      regionFlowlines <- readRDS(nhd_file_path)
-      if (hucLevel == 2) {
-        hucFlowlines <- regionFlowlines
-      } else {
-        hucFlowlines <- filter(regionFlowlines, startsWith(REACHCODE, as.character(hucSelected))) 
-      }
-      print(Sys.time() - start)
-      
-      # start <- Sys.time()
-      # nhd_path <- "Datasets/NHDPlusNationalData/Flowlines_HUC8"
-      # hucFlowlines <- list.files(nhd_path, pattern=paste0("^HUC8_", hucSelected), full.names = T) %>%
-      #   map(readRDS) %>%
-      #   do.call(rbind, .)
-      # print(Sys.time() - start)
-      # 
-      # start <- Sys.time()
-      # nhd_path <- "Datasets/NHDPlusNationalData/nhdplus_flowline.gpkg"
-      # nhd_query <- sprintf("SELECT * FROM nhdplus_flowline WHERE REACHCODE LIKE '%s%%'", hucSelected)
-      # hucFlowlines <- st_read(nhd_path, query = nhd_query)
-      # print(Sys.time() - start)
-      # 
-      coverageInfo <- select(hucFlowlines, COMID, TotDASqKM, Pathlength) %>% 
-        st_set_geometry(NULL)
-      selected_wqp_data_coverage <- left_join(selected_wqp_data, coverageInfo, by="COMID")
       
       # Lists and dates for select inputs
       locationTypeNames <- as.list(levels(pull(selected_wqp_data_coverage, ResolvedMonitoringLocationTypeName)))
