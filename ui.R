@@ -34,8 +34,8 @@ fluidPage(
   leafletOutput(outputId = "wqpMap", height = "100%", width="100%"),
   # leafletOutput(outputId = "wqpMap", height = "400px", width="800px"),
   
-  absolutePanel(id = "inputs", class = "inputs", fixed = T, draggable = TRUE, top = "auto", left = "auto", right = 175, 
-                bottom = 200, width = 200, height = "auto",
+  absolutePanel(id = "inputs", class = "inputs", fixed = T, draggable = TRUE, top = 400, left = "auto", right = 175, 
+                bottom = "auto", width = 200, height = "auto",
                 
                 h2("Water Quality Portal"),
                 
@@ -55,7 +55,7 @@ fluidPage(
                             selected = "All"),
                 
                 conditionalPanel(condition = "output.select",
-                                actionButton("zoom", "Show me more!")
+                                actionButton("zoom", "Show me more!", style = "margin-bottom: 20px;")
                 )
   ),
   # conditionalPanel(condition = "output.showCoverage", 
@@ -68,10 +68,12 @@ fluidPage(
   #                 plotOutput("coverage1") #%>% withSpinner(type=2, color.background="white")
   #   )
   # ),
-  absolutePanel(id = "coveragePlot", class = "inputs", draggable = T, top = "auto", left = 40, right = "auto",
-                bottom = 200, width = 400, height = "auto",
+  absolutePanel(id = "coveragePlot", class = "inputs", draggable = T, top = 325, left = 40, right = "auto",
+                bottom = "auto", width = 400, height = "auto",
                 h4(textOutput("selectedHUCName")),
-                plotOutput("coverage1") #%>% withSpinner(type=2, color.background="white")
+                conditionalPanel(condition = "output.showCoverage", style = "margin-bottom: 20px;",
+                                 plotOutput("coverage1") #%>% withSpinner(type=2, color.background="white")
+                                 )
   ),
   uiOutput("zoomedIn")
 )
