@@ -200,6 +200,11 @@ function(input, output, session) {
                       labelOptions = labelOptions(
                         textsize = "12px"
                       ),
+                      highlight = highlightOptions(
+                        fillOpacity = 0,
+                        bringToFront = TRUE,
+                        sendToBack = TRUE
+                      ),
                       options = pathOptions(pane = "selections")
           )
       } else {
@@ -213,6 +218,11 @@ function(input, output, session) {
                                     selectedHucBound[[constCol]], " ", constituent," measurements", sep=""),
                       labelOptions = labelOptions(
                         textsize = "12px"
+                      ),
+                      highlight = highlightOptions(
+                        fillOpacity = 0,
+                        bringToFront = TRUE,
+                        sendToBack = TRUE
                       ),
                       options = pathOptions(pane = "selections")
           )
@@ -260,6 +270,11 @@ function(input, output, session) {
                       labelOptions = labelOptions(
                         textsize = "12px"
                       ),
+                      highlight = highlightOptions(
+                        fillOpacity = 0,
+                        bringToFront = TRUE,
+                        sendToBack = TRUE
+                      ),
                       options = pathOptions(pane = "selections")
           )
       } else {
@@ -273,6 +288,11 @@ function(input, output, session) {
                                     selectedHucBound[[constCol]], " ", constituent," measurements", sep=""),
                       labelOptions = labelOptions(
                         textsize = "12px"
+                      ),
+                      highlight = highlightOptions(
+                        fillOpacity = 0,
+                        bringToFront = TRUE,
+                        sendToBack = TRUE
                       ),
                       options = pathOptions(pane = "selections")
           )
