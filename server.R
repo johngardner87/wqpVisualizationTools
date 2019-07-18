@@ -339,9 +339,32 @@ function(input, output, session) {
         # ------------- END LOADING IN WQP AND NHD DATA
         
         output$coverage1 <- renderPlot({
-          ggplot(coverage_properRange, aes(x = date, y = TotDASqKM)) +
-            geom_point() + scale_y_log10()
+          if (input$covgAxis == "catchment") {
+            ggplot(coverage_properRange, aes(x = date, y = TotDASqKM)) +
+              geom_point(aes(color = harmonized_parameter)) + scale_y_log10() + 
+              theme(legend.position = "bottom", legend.title=element_blank()) + labs(x = "Date", y = "Upstream Catchment Area")
+          } else {
+            ggplot(coverage_properRange, aes(x = date, y = Pathlength)) +
+              geom_point(aes(color = harmonized_parameter)) + scale_y_log10() + 
+              theme(legend.position = "bottom", legend.title=element_blank()) + labs(x = "Date", y = "Distance to outlet")
+          }
         })
+        
+        # output$coverage1 <- renderPlotly({
+        #   if (input$covgAxis == "catchment") {
+        #     covg <- plot_ly(coverage_properRange, x=~date, y=~TotDASqKM, text=~MonitoringLocationName) %>%
+        #       add_markers(color=~harmonized_parameter) %>%
+        #       layout(xaxis=list(title = "Date"), yaxis=list(title="Upstream Catchment Area", type = "log")) %>%
+        #       toWebGL()
+        #   } else {
+        #     covg <- plot_ly(coverage_properRange, x=~date, y=~Pathlength, text=~MonitoringLocationName) %>%
+        #       add_markers(color=~harmonized_parameter) %>%
+        #       layout(xaxis=list(title = "Date"), yaxis=list(title="Distance to outlet")) %>%
+        #       highlight("plotly_selected", off = "plotly_deselect") %>%
+        #       toWebGL()
+        #   }
+        #   covg
+        # })
       } else {
         output$coverage1 <- NULL
       }
@@ -350,6 +373,7 @@ function(input, output, session) {
       leafletProxy("wqpMap") %>% removeShape(event$id)
       output$select <- reactive({F})
       output$showCoverage <- reactive({F})
+      output$selectedHUCName <- renderText("Select a watershed...")
       print("select: F")
     }
   })

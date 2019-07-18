@@ -68,11 +68,14 @@ fluidPage(
   #                 plotOutput("coverage1") #%>% withSpinner(type=2, color.background="white")
   #   )
   # ),
-  absolutePanel(id = "coveragePlot", class = "inputs", draggable = T, top = 325, left = 40, right = "auto",
-                bottom = "auto", width = 400, height = "auto",
+  absolutePanel(id = "coveragePlot", class = "coveragePlot", draggable = T, top = 325, left = 40, right = "auto",
+                bottom = "auto", width = "auto", height = "auto",
                 h4(textOutput("selectedHUCName")),
                 conditionalPanel(condition = "output.showCoverage", style = "margin-bottom: 20px;",
-                                 plotOutput("coverage1") #%>% withSpinner(type=2, color.background="white")
+                                 plotOutput("coverage1"), #%>% withSpinner(type=2, color.background="white")
+                                 # plotlyOutput("coverage1"), #%>% withSpinner(type=2, color.background="white")
+                                 selectInput("covgAxis", "Y-Axis:", 
+                                             choices = c("Upstream Catchment Area" = "catchment", "Distance to network mouth" = "Pathlength"))
                                  )
   ),
   uiOutput("zoomedIn")
