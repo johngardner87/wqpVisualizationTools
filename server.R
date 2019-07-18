@@ -10,6 +10,8 @@ library(rmapshaper)
 library(shinycssloaders)
 library(shinyalert)
 library(crosstalk)
+library(DBI)
+library(RSQLite)
 
 # Server ------------------------------------------------------------------
 
@@ -89,7 +91,7 @@ function(input, output, session) {
   options(opacityDim = 0)
   outputOptions(output, "select", suspendWhenHidden = FALSE, priority = 1)
   outputOptions(output, "showCoverage", suspendWhenHidden = FALSE, priority = 1)
-  
+
   # Main map ---------------------------------------------------------------
   observe({
     hucLevel <<- input$hucInput
@@ -332,7 +334,6 @@ function(input, output, session) {
           filter(date_time > as.Date("1930-01-01") & date_time < as.Date("2018-04-23")) %>% 
           filter(TotDASqKM > 0)
         
-        glimpse(coverage_properRange)
         # ------------- END LOADING IN WQP AND NHD DATA
         
         output$coverage1 <- renderPlot({
@@ -707,6 +708,10 @@ function(input, output, session) {
     filtered_unique <<- NULL
     key <<- NULL
     map_key <<- NULL
+    
+    output$coverage1 <- NULL
+    output$selectedHUCName <- renderText("Select a watershed...")
+    
     output$timeSeries <- NULL
     output$hucDetail <- NULL
     output$coverage <- NULL
