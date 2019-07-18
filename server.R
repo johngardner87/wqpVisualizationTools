@@ -312,30 +312,27 @@ function(input, output, session) {
         
         # -------------- LOADING IN WQP AND NHD DATA
         # Loading relevant wqp data and flowline data
+        # wqp_path <- sprintf(
+        #   "Datasets/wqp_Constituents/GPKGs/wqp_%s_indexed.gpkg", input$constInput)
+        # wqp_query <- sprintf(
+        #   "SELECT * FROM wqp_%s_indexed WHERE HUCEightDigitCode LIKE '%s%%'", input$constInput, hucSelected)
+        # selected_wqp_data <- st_read(wqp_path, query=wqp_query)
         wqp_path <- sprintf(
-          "Datasets/wqp_Constituents/wqp_%s_indexed.gpkg", input$constInput)
+          "Datasets/wqp_Constituents/wqp_%s_indexed.sqlite", input$constInput)
+        db <- dbConnect(SQLite(), wqp_path)
         wqp_query <- sprintf(
-          "SELECT * FROM wqp_%s_indexed WHERE HUCEightDigitCode LIKE '%s%%'", input$constInput, hucSelected)
-        selected_wqp_data <- st_read(wqp_path, query=wqp_query)
-        
-        start <- Sys.time()
-        nhd_path <- "Datasets/NHDPlusNationalData/Flowlines/"
-        nhd_file_path <- paste0(nhd_path, "flowlines_simplified_", substr(hucSelected, 1, 2),".rds")
-        regionFlowlines <- readRDS(nhd_file_path)
-        if (hucLevel == 2) {
-          hucFlowlines <- regionFlowlines
-        } else {
-          hucFlowlines <- filter(regionFlowlines, startsWith(REACHCODE, as.character(hucSelected))) 
-        }
-        print(Sys.time() - start)
-        
-        coverageInfo <- select(hucFlowlines, COMID, TotDASqKM, Pathlength) %>% 
-          st_set_geometry(NULL)
-        selected_wqp_data_coverage <<- left_join(selected_wqp_data, coverageInfo, by="COMID")
+          "SELECT * FROM %s_data WHERE HUCEightDigitCode LIKE '%s%%'", input$constInput, hucSelected)
+        selected_wqp_data_coverage <<- tbl(db, sql(wqp_query)) %>%
+          as_tibble() %>%
+          mutate(date_time = as.POSIXct(date_time, format = "%F %T")) %>%
+          mutate(date = as.POSIXct(date, format = "%F")) %>%
+          st_as_sf(coords = c("X", "Y"), crs=4269)
         
         coverage_properRange <- selected_wqp_data_coverage %>% 
           filter(date_time > as.Date("1930-01-01") & date_time < as.Date("2018-04-23")) %>% 
           filter(TotDASqKM > 0)
+        
+        glimpse(coverage_properRange)
         # ------------- END LOADING IN WQP AND NHD DATA
         
         output$coverage1 <- renderPlot({
