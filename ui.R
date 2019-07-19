@@ -5,7 +5,6 @@ library(shiny)
 library(plotly)
 library(leaflet)
 library(sf)
-library(rmapshaper)
 library(shinyalert)
 
 # UI Layout ---------------------------------------------------------------
@@ -42,7 +41,8 @@ fluidPage(
                 selectInput(inputId = "hucInput",
                             label = "HUC Level",
                             # choices = c(2, 4, 6, 8, 10, 12)),
-                            choices = c(2, 4, 6, 8)),
+                            choices = c(2, 4, 6, 8),
+                            selected = 4),
                 
                 selectInput(inputId = "constInput",
                             label = "Constituent",
