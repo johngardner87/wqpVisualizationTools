@@ -52,6 +52,6 @@ Add tabs?
 ---
 ## Contact information for the programmer
 ## Known bugs and  -->
-## Credits and acknowledgments
+<!-- ## Credits and acknowledgments
 `cite the proposal`
-`give the names for the team`
+`give the names for the team` -->
