@@ -114,8 +114,8 @@ function(input, output, session) {
   
   # options(opacityDim = 0, persistent = F, selected = attrs_selected(fill="toself", fillcolor = "green"))
   options(opacityDim = 0)
-  outputOptions(output, "select", suspendWhenHidden = FALSE, priority = 1)
-  outputOptions(output, "showCoverage", suspendWhenHidden = FALSE, priority = 1)
+  outputOptions(output, "select", suspendWhenHidden = FALSE)
+  outputOptions(output, "showCoverage", suspendWhenHidden = FALSE)
 
   observe({
 

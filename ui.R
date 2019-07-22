@@ -31,8 +31,10 @@ fluidPage(
   
   # Map Output
   leafletOutput(outputId = "wqpMap", height = "100%", width="100%"),
-
-  # absolutePanel(class = "coveragePlot", fixed = T, top = 200, left = "auto", right = 300, bottom = "auto", width = "auto", height = "auto", h4(textOutput("showCoverage"))),
+  
+  absolutePanel(h4(textOutput("showCoverage"), h4(textOutput("select")))),
+  
+  # absolutePanel(class = "coveragePlot", fixed = T, top = 200, left = "auto", right = 300, bottom = "auto", width = "auto", height = "auto", h4(textOutput("showCoverage"), h4(textOutput("select")))),
     
   absolutePanel(id = "inputs", class = "inputs", fixed = T, draggable = TRUE, top = 400, left = "auto", right = 175, 
                 bottom = "auto", width = 200, height = "auto",
