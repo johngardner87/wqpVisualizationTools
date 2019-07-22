@@ -118,6 +118,7 @@ function(input, output, session) {
   outputOptions(output, "showCoverage", suspendWhenHidden = FALSE, priority = 1)
 
   observe({
+
     hucLevel <<- input$hucInput
     # hucLevelUp <- as.numeric(hucLevel) - 2
     hucLevelUp <- 2
@@ -257,15 +258,7 @@ function(input, output, session) {
                       options = pathOptions(pane = "selections")
           )
       }
-      output$select <- reactive({T})
     }
-  })
-  
-  observe({
-    click <- input$wqpMap_shape_click
-    if(is.null(click)) {return()}
-    print("CLICK REGISTERED --------------")
-    print(click$id)
   })
   
   # HUC selection (redraws polygon with red boundary, behaves differently depending on current selection)
@@ -356,7 +349,8 @@ function(input, output, session) {
         
         coverage_properRange <- selected_wqp_data_coverage %>% 
           filter(date_time > as.Date("1930-01-01") & date_time < as.Date("2018-04-23")) %>% 
-          filter(TotDASqKM > 0)
+          filter(TotDASqKM > 0) %>% 
+          filter(Pathlength >= 0)
         dbDisconnect(db)
         # ------------- END LOADING IN WQP AND NHD DATA
         
@@ -497,18 +491,19 @@ function(input, output, session) {
                        )
             ),
             column(4,
-                   div(class = "widget",
+                   div(class = "widget", style = "padding-bottom:5px",
                        h4(class="sidebarTitles", "Settings"),
                        splitLayout(checkboxInput("cluster", "Cluster site locations", F),
-                                   actionButton("refresh", "Refresh map", icon = icon("refresh"), width = "100%")),
-                       splitLayout(checkboxInput("showHUC10", "Show HUC10 Boundaries", F),
+                                   actionButton(style="margin-top: -5px;", "refresh", "Refresh map", icon = icon("refresh"), width = "100%")),
+                       splitLayout(style="margin-top: -10px;",
+                                   checkboxInput("showHUC10", "Show HUC10 Boundaries", F),
                                    checkboxInput("showHUC12", "Show HUC12 Boundaries", F)),
                        splitLayout(selectInput("covgAxis2", "Coverage Metric:", 
                                                choices = c("Upstream Catchment Area" = "catchment", "Distance to Outlet" = "Pathlength")),
                                    selectizeInput("covgLog2", "Y-Axis: ", choices=c("Linear", "Log"), multiple = F, width = "100%")
                                    )
                    ),
-                   div(class = "widget",
+                   div(class = "widget", style = "margin-top:-4px;",
                        h4(class = "sidebarTitles", "Time Series"),
                        actionButton("showTimeSeries", "Generate time series for selected points", width = "100%")
                    )
