@@ -11,7 +11,7 @@ library(sf)
 countMeasurements <- function(dir) {
   setwd(dir)
   constituents <- c("chlorophyll", "tss", "doc", "secchi")
-  for (i in seq(4, 8, 2)) {
+  for (i in seq(2, 8, 2)) {
     bounds <- st_read(paste0("Datasets/WBD_Simplified/WBDHU", i, ".gpkg"))
     for (const in constituents) {
       # Original counting method, inaccurate due to non-unique vals in NAME column
@@ -25,8 +25,8 @@ countMeasurements <- function(dir) {
       # bounds <- plyr::rename(bounds, c("n" = paste(const, "MeasCount",sep="")))
       counts <- sapply(bounds[[paste0("HUC", i)]], function(j) {
         wqp_query <- sprintf("SELECT * FROM wqp_%s_indexed WHERE HUCEightDigitCode LIKE '%02s%%'", const, j)
-        measurements <- st_read(paste0("Datasets/wqp_Constituents/wqp_", const, "_indexed.gpkg"), query = wqp_query)
-        return(nrow(measurements))
+        measurements <- st_read(paste0("Datasets/wqp_Constituents/wqp_", const, "_indexed.gpkg"), query = wqp_query) %>% nrow()
+        return(measurements)
       })
       bounds <- mutate(bounds, counts)
       bounds <- plyr::rename(bounds, c("counts" = paste0(const, "MeasCount")))

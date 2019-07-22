@@ -1,5 +1,4 @@
 # wqpVisualizationTools
-`logo`
 
 Developed by a team of data scientists and ecologists at Duke University, wqpVisualizationTools is an RShiny based visualization tool for US national water quality data. The web app provides a user-friendly interface to **explore**, **filter**, and **download** water quality and hydrology data from the [Water Quality Portal](https://www.waterqualitydata.us), [Watershed Boundary Dataset](https://www.usgs.gov/core-science-systems/ngp/national-hydrography/watershed-boundary-dataset), and the [National Hydrography Dataset](https://www.usgs.gov/core-science-systems/ngp/national-hydrography).
 
@@ -21,7 +20,7 @@ For the script of harmonization, please see [code]().  -->
 
 ## Run the app locally
 - Install necessary libraries in R
-```
+```R
 install.packages("tidyverse", "feather", "shiny", "plotly", "leaflet", "sf", "shinycssloaders", "shinyalert", "DBI", "RSQLite")
 ```
 - Clone the repository
@@ -34,11 +33,11 @@ install.packages("tidyverse", "feather", "shiny", "plotly", "leaflet", "sf", "sh
         - [National Hydrography Dataset]()
         - Go through the process outlined in the [helper tool documentation](docs/HELPERTOOLS.md)
 - Set the working directory
-```
+```R
 setwd("/your/working/directory")
 ```
 - Run the app
-```
+```R
 runApp("wqpVisualizationTools")
 ```
 <!-- ## What to do if you want to switch to datasets of your choice?
