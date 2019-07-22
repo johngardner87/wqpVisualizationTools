@@ -32,7 +32,9 @@ fluidPage(
   # Map Output
   leafletOutput(outputId = "wqpMap", height = "100%", width="100%"),
   
-  absolutePanel(h4(textOutput("showCoverage"), h4(textOutput("select")))),
+  # For whatever reason displaying output.select in this way fixes major bug 
+  # when displaying pop-up coverage plot for second time
+  absolutePanel(h4(textOutput("select"))),
   
   # absolutePanel(class = "coveragePlot", fixed = T, top = 200, left = "auto", right = 300, bottom = "auto", width = "auto", height = "auto", h4(textOutput("showCoverage"), h4(textOutput("select")))),
     

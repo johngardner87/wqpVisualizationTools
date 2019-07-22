@@ -324,6 +324,7 @@ function(input, output, session) {
           )
       }
       print(paste("you've selected: ", hucSelected, sep=""))
+      print(paste(selectedHucBound$NAME, hucRegions[sprintf("%02s", str_length(hucSelected))]))
       output$selectedHUCName <- renderText(paste(selectedHucBound$NAME, hucRegions[sprintf("%02s", str_length(hucSelected))]))
       print(Sys.time() - start)
       
@@ -612,10 +613,11 @@ function(input, output, session) {
           
       })
 
+      hucDetailPal <- colorNumeric("YlOrRd", range(pull(filtered_unique(), resultCount)))
       leafletProxy("hucDetail", data=filtered_unique()) %>%
         addCircleMarkers(radius = 3,
                          stroke = F,
-                         color = "red",
+                         color = ~hucDetailPal(resultCount),
                          # opacity = 0.8,
                          # fillOpacity = 0.2,
                          opacity = 1,
@@ -736,9 +738,10 @@ function(input, output, session) {
           group = "markers",
           label = ~MonitoringLocationName)
     } else {
+      hucDetailPal <- colorNumeric("YlOrRd", range(pull(filtered_unique(), resultCount)))
       markers %>% addCircleMarkers(radius = 3,
                                    stroke = F,
-                                   color = "red",
+                                   color = ~hucDetailPal(resultCount),
                                    options = pathOptions(pane = "points"),
                                    # opacity = 0.8,
                                    # fillOpacity = 0.2,
@@ -802,13 +805,14 @@ function(input, output, session) {
     # output$coverage1 <- NULL
     # output$selectedHUCName <- renderText("Select a watershed...")
     
-    # output$hucDetail <- NULL
-    # output$coverage <- NULL
+    output$hucDetail <- NULL
+    output$coverage <- NULL
     output$zoomedIn <- NULL
     # selectedHucBound <<- NULL
   })
   
   observeEvent(input$back2, {
+    output$timeSeries <- NULL
     output$pageThree <- NULL
   })
 }
