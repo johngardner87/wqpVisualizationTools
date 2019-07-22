@@ -74,8 +74,8 @@ fluidPage(
                 conditionalPanel(condition = "output.showCoverage", style = "margin-bottom: 20px;",
                                  plotOutput("coverage1"), #%>% withSpinner(type=2, color.background="white")
                                  # plotlyOutput("coverage1"), #%>% withSpinner(type=2, color.background="white")
-                                 selectInput("covgAxis", "Y-Axis:", 
-                                             choices = c("Upstream Catchment Area" = "catchment", "Distance to network mouth" = "Pathlength"))
+                                 selectInput("covgAxis", "Coverage Metric:", 
+                                             choices = c("Upstream Catchment Area" = "catchment", "Distance to Outlet" = "Pathlength"))
                                  )
   ),
   uiOutput("zoomedIn")

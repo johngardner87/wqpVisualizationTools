@@ -9,7 +9,7 @@ library(sf)
 library(shinycssloaders)
 library(shinyalert)
 library(crosstalk)
-library(DBI)
+# library(DBI)
 library(RSQLite)
 
 # Server ------------------------------------------------------------------
@@ -357,18 +357,18 @@ function(input, output, session) {
         coverage_properRange <- selected_wqp_data_coverage %>% 
           filter(date_time > as.Date("1930-01-01") & date_time < as.Date("2018-04-23")) %>% 
           filter(TotDASqKM > 0)
-        
+        dbDisconnect(db)
         # ------------- END LOADING IN WQP AND NHD DATA
         
         output$coverage1 <- renderPlot({
           if (input$covgAxis == "catchment") {
             ggplot(coverage_properRange, aes(x = date, y = TotDASqKM)) +
               geom_point(aes(color = harmonized_parameter)) + scale_y_log10() + 
-              theme(legend.position = "bottom", legend.title=element_blank()) + labs(x = "Date", y = "Upstream Catchment Area")
+              theme(legend.position = "bottom", legend.title=element_blank()) + labs(x = "Date", y = "Upstream Catchment Area (sq. km)")
           } else {
             ggplot(coverage_properRange, aes(x = date, y = Pathlength)) +
               geom_point(aes(color = harmonized_parameter)) + 
-              theme(legend.position = "bottom", legend.title=element_blank()) + labs(x = "Date", y = "Distance to outlet")
+              theme(legend.position = "bottom", legend.title=element_blank()) + labs(x = "Date", y = "Distance to Outlet (km)")
           }
         })
         
@@ -436,10 +436,10 @@ function(input, output, session) {
           class = "details",
           ## Header ---------
           fluidRow(
-            column(8,
+            column(10,
                    tags$h1("Coverage in the ", strong(selectedHucBound$NAME), hucRegions[sprintf("%02s", str_length(hucSelected))])
                    ),
-            column(4,
+            column(2,
                    actionButton("back", "Take me back!", 
                                 width = "100%", icon = icon("arrow-left"), style="width:100%, position:absolute; margin-top:28px")
                    )
@@ -474,7 +474,7 @@ function(input, output, session) {
                        splitLayout(cellWidths = c("60%", "40%"),
                          sliderInput("selectDates", "Filter by date:", min = firstDate, max = lastDate, 
                                      value = c(firstDate, lastDate), width = "90%"),
-                         sliderInput("selectCatchment", "Filter by upstream catchment area:", min = 0, max = highCatchment, 
+                         sliderInput("selectCatchment", "Filter by upstream catchment area:", min = 0, max = ceiling(highCatchment), 
                                      value = c(0, highCatchment), width = "100%")
                        ),
                        # sliderInput("selectDates", "Filter by date:", min = firstDate, max = lastDate, 
@@ -498,11 +498,19 @@ function(input, output, session) {
             ),
             column(4,
                    div(class = "widget",
-                       h4(class="sidebarTitles", "Map Settings"),
-                       checkboxInput("cluster", "Cluster", F),
+                       h4(class="sidebarTitles", "Settings"),
+                       splitLayout(checkboxInput("cluster", "Cluster site locations", F),
+                                   actionButton("refresh", "Refresh map", icon = icon("refresh"), width = "100%")),
                        splitLayout(checkboxInput("showHUC10", "Show HUC10 Boundaries", F),
                                    checkboxInput("showHUC12", "Show HUC12 Boundaries", F)),
-                       actionButton("showTimeSeries", "Show time series for selected points")
+                       splitLayout(selectInput("covgAxis2", "Coverage Metric:", 
+                                               choices = c("Upstream Catchment Area" = "catchment", "Distance to Outlet" = "Pathlength")),
+                                   selectizeInput("covgLog2", "Y-Axis: ", choices=c("Linear", "Log"), multiple = F, width = "100%")
+                                   )
+                   ),
+                   div(class = "widget",
+                       h4(class = "sidebarTitles", "Time Series"),
+                       actionButton("showTimeSeries", "Generate time series for selected points", width = "100%")
                    )
             )
           ),
@@ -510,96 +518,12 @@ function(input, output, session) {
         )
       })
       
-      # Old ui ---------
-      # output$zoomedIn <- renderUI({
-      #   fluidPage(
-      #     class = "details",
-      #     fluidRow(
-      #       column(10,
-      #              tags$h1("Coverage in the ", strong(selectedHucBound$NAME), hucRegions[sprintf("%02s", str_length(hucSelected))])
-      #              ),
-      #       column(2, 
-      #              actionButton("back", "Take me back!", 
-      #                           width = "100%", icon = icon("arrow-left"), style="width:100%, position:absolute; top:28px")
-      #              )
-      #     ),
-      #     fluidRow(
-      #       column(10,
-      #              tags$h3(paste0("HUC", str_length(hucSelected), ": "),
-      #                      strong(hucSelected), " — ", prettyNum(selectedHucBound$AREASQKM, big.mark=","),
-      #                      "sq. km ", getRegionName(hucSelected))
-      #       ),
-      #       column(2, 
-      #               h3("Filters")
-      #       )
-      #     ),
-      #     fluidRow(
-      #       column(5,
-      #         div(class="widget",
-      #             leafletOutput(outputId = "hucDetail") %>% withSpinner(type=2, color.background="white")
-      #         )
-      #       ),
-      #       column(5,
-      #        div(class="widget",
-      #           plotlyOutput("coverage")
-      #        )
-      #       ),
-      #       column(2,
-      #         div(class = "widget",
-      #           h4(class="sidebarTitles", "Global Settings"),
-      #           selectizeInput("selectLocationType", "Filter by site location type:",
-      #                          choices=locationTypeNames, multiple=T, width = "100%", 
-      #                          options = list(
-      #                            placeholder = 'Choose a site location type',
-      #                            onInitialize = I('function() { this.setValue(""); }'))),
-      #           selectizeInput("selectStreamNames", "Filter by site location name:",
-      #                          choices=streamNames, multiple=T, width = "100%", 
-      #                          options = list(
-      #                            placeholder = 'Choose a site location'
-      #                          )),
-      #           # dateRangeInput("selectDates", "Filter by date:", start = firstDate, end = lastDate, startview = "decade"),
-      #           sliderInput("selectDates", "Filter by date:", min = firstDate, max = lastDate, value = c(firstDate, lastDate)),
-      #           h4(class="sidebarTitles", "Measurement Site Map"),
-      #           checkboxInput("cluster", "Cluster", F),
-      #           splitLayout(checkboxInput("showHUC10", "HUC10s", F),
-      #                       checkboxInput("showHUC12", "HUC12s", F))
-      #         )
-      #       )
-      #     ),
-      #     fluidRow(
-      #       column(10,
-      #         div(class = "widget",
-      #             tabsetPanel(type = "tabs", 
-      #                         tabPanel("Time Series", plotlyOutput("timeSeries")), 
-      #                         tabPanel("Histogram", plotlyOutput("histogram"))
-      #                         # tabPanel("Annual Trend")
-      #             )
-      #         )
-      #       ),
-      #       column(2,
-      #              div(class="widget",
-      #                 h4(class = "sidebarTitles", "Measurement Plots"),
-      #                 selectizeInput("timeSeriesLog", "Y-Axis: ", choices=c("Linear", "Log"), multiple = F, width = "100%"),
-      #                 downloadButton("dl", "Download filtered data", style="width:100%")
-      #                 # actionButton("plotUpdate", "Redraw plots!", icon=icon("sync"), width="100%")
-      #                 # selectizeInput("selectConstituent", "Filter by constituent:", 
-      #                 #                choices = c("Chlorophyll" = "chlorophyll", 
-      #                 #                            "Dissolved Organic Carbon (doc)" = "doc", 
-      #                 #                            "Turbidity (secchi)" = "secchi", 
-      #                 #                            "Total Suspended Solids (tss)" = "tss"),
-      #                 #                multiple=T, width="100%")
-      #             )
-      #       )
-      #     )
-      #   )
-      # })
-      
       # Operations for filtering -------
       
       # Lists and dates for select inputs
       locationTypeNames <- as.list(unique(pull(selected_wqp_data_coverage, ResolvedMonitoringLocationTypeName)))
       streamNames <- as.list(unique(pull(selected_wqp_data_coverage, MonitoringLocationName)))
-      highCatchment <- max(pull(selected_wqp_data_coverage, TotDASqKM))
+      highCatchment <- max(pull(selected_wqp_data_coverage, TotDASqKM), na.rm = T)
       
       selectedDates <- as.Date(pull(selected_wqp_data_coverage, date_time))
       #Filter out unwanted dates
@@ -728,24 +652,48 @@ function(input, output, session) {
       # })
       
       output$coverage <- renderPlotly({
-        covg <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~TotDASqKM, text=~MonitoringLocationName) %>% 
-          add_markers(color=~harmonized_parameter) %>%
-          layout(xaxis=list(title = "Date"), yaxis=list(title="Upstream Catchment Area", type = "log"), showlegend = T) %>% 
-          highlight("plotly_selected", off = "plotly_deselect") %>%
-          event_register("plotly_relayout") %>%
-          # rangeslider() #%>% 
-          toWebGL()
+        if (input$covgAxis2 == "catchment") {
+          if (input$covgLog2 == "Linear") {
+            covg <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~TotDASqKM, text=~MonitoringLocationName) %>% 
+              add_markers(color=~harmonized_parameter) %>%
+              layout(xaxis=list(title = "Date"), yaxis=list(title="Upstream Catchment Area (sq. km)"), showlegend = T) %>% 
+              highlight("plotly_selected", off = "plotly_deselect") %>%
+              # rangeslider() #%>% 
+              toWebGL()
+          } else {
+            covg <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~TotDASqKM, text=~MonitoringLocationName) %>% 
+              add_markers(color=~harmonized_parameter) %>%
+              layout(xaxis=list(title = "Date"), yaxis=list(title="Upstream Catchment Area (sq. km)", type = "log"), showlegend = T) %>% 
+              highlight("plotly_selected", off = "plotly_deselect") %>%
+              toWebGL()
+          }
+        } else {
+          if (input$covgLog2 == "Linear") {
+            covg <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~Pathlength, text=~MonitoringLocationName) %>% 
+              add_markers(color=~harmonized_parameter) %>%
+              layout(xaxis=list(title = "Date"), yaxis=list(title="Distance to Outlet (km)"), showlegend = T) %>% 
+              highlight("plotly_selected", off = "plotly_deselect") %>%
+              toWebGL()
+          } else {
+            covg <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~Pathlength, text=~MonitoringLocationName) %>% 
+              add_markers(color=~harmonized_parameter) %>%
+              layout(xaxis=list(title = "Date"), yaxis=list(title="Distance to Outlet (km)", type = "log"), showlegend = T) %>% 
+              highlight("plotly_selected", off = "plotly_deselect") %>%
+              toWebGL()
+          }
+        }
+        covg
       })
       
       output$timeSeries <- renderPlotly({
         if(input$timeSeriesLog == "Log") {
-          timeSeries <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~harmonized_value) %>%
-            add_markers(color=~factor(harmonized_parameter)) %>%
+          timeSeries <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
+            add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
             layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit", type="log"), showlegend = T) %>%
             highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T))
         } else {
-          timeSeries <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~harmonized_value) %>%
-            add_markers(color=~factor(harmonized_parameter)) %>%
+          timeSeries <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
+            add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
             layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit"), showlegend = T) %>%
             highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T))
         }
@@ -771,9 +719,10 @@ function(input, output, session) {
   })
   
   # Drawing of points based on selection options
-  observeEvent(c(input$cluster, input$selectLocationType, input$selectDates, input$selectCatchment, input$selectStreamNames, input$constInput2), {
-    
+  observeEvent(c(input$refresh, input$cluster, input$selectLocationType, input$selectDates, input$selectCatchment, input$selectStreamNames, input$constInput2), {
     #Fix for crosstalk / leaflet issue when filter selects zero points
+    markers <- leafletProxy("hucDetail", data = filtered_unique())
+    clearGroup(markers, group="markers")
     req(nrow(filtered_unique()) != 0)
     
     # Fix for crosstalk / leaflet attempts to filter after a plot-based selection was made
@@ -782,8 +731,6 @@ function(input, output, session) {
     # map_key$clearSelection("hucDetail")
     
     if(!is.null(input$cluster) && input$cluster) {
-      markers <- leafletProxy("hucDetail", data = filtered_unique())
-      clearGroup(markers, group="markers")
       markers %>%
         addCircleMarkers(
           stroke = F,
@@ -794,8 +741,6 @@ function(input, output, session) {
           group = "markers",
           label = ~MonitoringLocationName)
     } else {
-      markers <- leafletProxy("hucDetail", data = filtered_unique())
-      clearGroup(markers, group="markers")
       markers %>% addCircleMarkers(radius = 3,
                                    stroke = F,
                                    color = "red",
@@ -837,16 +782,15 @@ function(input, output, session) {
       fluidPage(
         class = "details",
         fluidRow(
-          column(8, h1("Time Series")),
-          column(4, actionButton("back2", "Take me back!", 
+          column(10, h1("Time Series")),
+          column(2, actionButton("back2", "Take me back!", 
                                  width = "100%", icon = icon("arrow-left"), style="width:100%, position:absolute; margin-top:28px"))
         ),
         fluidRow(
-          column(12, plotlyOutput("timeSeries"))
-        ),
-        fluidRow(
-          selectizeInput("timeSeriesLog", "Y-Axis: ", choices=c("Linear", "Log"), multiple = F, width = "100%"),
-          downloadButton("dl", "Download filtered data", style="width:100%")
+          column(10, div(class = "widget", plotlyOutput("timeSeries"))),
+          column(2, div(class = "widget", 
+                        selectizeInput("timeSeriesLog", "Y-Axis: ", choices=c("Linear", "Log"), multiple = F, width = "100%"), 
+                        downloadButton("dl", "Download filtered data", style="width:100%")))
         )
       )
     })
@@ -862,10 +806,9 @@ function(input, output, session) {
     
     # output$coverage1 <- NULL
     # output$selectedHUCName <- renderText("Select a watershed...")
-    # 
-    # output$timeSeries <- NULL
-    output$hucDetail <- NULL
-    output$coverage <- NULL
+    
+    # output$hucDetail <- NULL
+    # output$coverage <- NULL
     output$zoomedIn <- NULL
     # selectedHucBound <<- NULL
   })

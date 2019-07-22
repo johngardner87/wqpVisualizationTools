@@ -12,7 +12,7 @@ Downloading and processing raw datasets and setting up the Datasets directory us
 - Water Boundary Dataset
   - Files available from the [USGS website](https://www.usgs.gov/core-science-systems/ngp/national-hydrography/access-national-hydrography-products) under 'Watershed Boundary Dataset (WBD) Direct Download Links' (look for WBD_National_GDB.zip)
 - National Hydrography Dataset
- - Files available from [EPA](https://www.epa.gov/waterdata/nhdplus-national-data) and [USGS](https://www.usgs.gov/core-science-systems/ngp/national-hydrography/access-national-hydrography-products) websites - read more about the files nhdPlusTools expects [here](https://github.com/USGS-R/nhdplusTools)
+  - Files available from [EPA](https://www.epa.gov/waterdata/nhdplus-national-data) and [USGS](https://www.usgs.gov/core-science-systems/ngp/national-hydrography/access-national-hydrography-products) websites - read more about the files nhdPlusTools expects [here](https://github.com/USGS-R/nhdplusTools)
 
 ## Processing the datasets
 - Install the necessary packages in R
