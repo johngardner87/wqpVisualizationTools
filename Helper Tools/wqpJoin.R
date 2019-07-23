@@ -16,10 +16,12 @@ wqpJoin <- function(dir, constituents, shape = FALSE) {
   
   setwd(dir)
   
-  # Measurements: https://www.dropbox.com/s/916qkiihkf9vcij/wqp_long_with_methods.csv?dl=0
+  # Measurements
   wqp_measurements <- read_csv("Datasets/wqp_long_with_methods.csv")
-  # Locations: https://drive.google.com/file/d/17RXovXq2_7qrwHC31wfhSKhmZT2n64sF/view
+  # Locations
   wqp_locations <- read_feather("Datasets/wqp_inventory.feather")
+  # Satellite Info
+  wqp_sat <- read_feather("Datasets/wide_pull.feather")
   
   if ("chlorophyll" %in% constituents) {
     meas_constituents <- constituents
@@ -30,10 +32,12 @@ wqpJoin <- function(dir, constituents, shape = FALSE) {
   
   measurements_filtered <- filter(wqp_measurements, harmonized_parameter %in% meas_constituents)
   locations_filtered <- filter(wqp_locations, Constituent %in% constituents)
+  sat_data <- select(wqp_sat, SiteID, date, landsat_id)
   
   # Now each measurement value is matched with corresponding location info from locations variable
   measByLocations <- left_join(measurements_filtered, locations_filtered, by = c("SiteID" = "MonitoringLocationIdentifier")) %>% 
-    drop_na(LatitudeMeasure, LongitudeMeasure)
+    drop_na(LatitudeMeasure, LongitudeMeasure) %>% 
+    left_join(sat_data, by = c("SiteID", "date"))
 
   fileName <- paste(constituents, collapse="_") %>% 
     paste("wqp", . , sep="_")

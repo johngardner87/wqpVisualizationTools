@@ -464,7 +464,7 @@ function(input, output, session) {
                        splitLayout(cellWidths = c("60%", "40%"),
                          sliderInput("selectDates", "Filter by date:", min = firstDate, max = lastDate, 
                                      value = c(firstDate, lastDate), width = "90%"),
-                         sliderInput("selectCatchment", "Filter by upstream catchment area:", min = 0, max = ceiling(highCatchment), 
+                         sliderInput("selectCatchment", "Filter by upstream catchment area (sq. km):", min = 0, max = ceiling(highCatchment), 
                                      value = c(0, highCatchment), width = "100%")
                        ),
                        # sliderInput("selectDates", "Filter by date:", min = firstDate, max = lastDate, 
@@ -477,6 +477,10 @@ function(input, output, session) {
                                    selectInput(inputId = "constInput2",
                                                label = "Filter by constituent:", width = "100%",
                                                choices = getConstChoices(input$constInput),
+                                               multiple = F),
+                                   selectInput(inputId = "satFilter",
+                                               label = "Filter by satellite overpass:", width = "100%",
+                                               choices = c("All points" = "all", "Points that align with a satellite overpass" = "sat"),
                                                multiple = F)
                                    ),
                        selectizeInput("selectStreamNames", "Filter by site location name:",
@@ -528,6 +532,9 @@ function(input, output, session) {
           filtered <- filter(selected_wqp_data_coverage,
                              as.Date(date_time) >= input$selectDates[1] & as.Date(date_time) <= input$selectDates[2])
         }
+        if (!is.null(input$satFilter) && input$satFilter != "all") {
+          filtered <- filter(filtered, !is.na(landsat_id))
+        }
         if (!is.null(input$selectCatchment)) {
           filtered <- filter(filtered,
                              TotDASqKM >= input$selectCatchment[1] & TotDASqKM <= input$selectCatchment[2])
@@ -552,6 +559,9 @@ function(input, output, session) {
         if (!is.null(input$selectDates)) {
           filtered <- filter(selected_wqp_data_coverage,
                              as.Date(date_time) >= input$selectDates[1] & as.Date(date_time) <= input$selectDates[2])
+        }
+        if (!is.null(input$satFilter) && input$satFilter != "all") {
+          filtered <- filter(filtered, !is.na(landsat_id))
         }
         if (!is.null(input$selectCatchment)) {
           filtered <- filter(filtered,
@@ -676,20 +686,6 @@ function(input, output, session) {
         }
         covg
       })
-      
-      output$timeSeries <- renderPlotly({
-        if(input$timeSeriesLog == "Log") {
-          timeSeries <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
-            add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
-            layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit", type="log"), showlegend = T) %>%
-            highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T))
-        } else {
-          timeSeries <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
-            add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
-            layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit"), showlegend = T) %>%
-            highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T))
-        }
-      })
 
       # output$histogram <- renderPlotly({
       #   histogram <- plot_ly(key, x=~harmonized_value) %>% 
@@ -711,7 +707,7 @@ function(input, output, session) {
   })
   
   # Drawing of points based on selection options
-  observeEvent(c(input$refresh, input$cluster, input$selectLocationType, 
+  observeEvent(c(input$refresh, input$cluster, input$selectLocationType, input$satFilter,
                  input$selectDates, input$selectCatchment, input$selectStreamNames, input$constInput2), {
     #Fix for crosstalk / leaflet issue when filter selects zero points
     markers <- leafletProxy("hucDetail", data = filtered_unique())
@@ -784,6 +780,20 @@ function(input, output, session) {
                         downloadButton("dl", "Download filtered data", style="width:100%")))
         )
       )
+    })
+    
+    output$timeSeries <- renderPlotly({
+      if(input$timeSeriesLog == "Log") {
+        timeSeries <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
+          add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
+          layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit", type="log"), showlegend = T) %>%
+          highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T))
+      } else {
+        timeSeries <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
+          add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
+          layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit"), showlegend = T) %>%
+          highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T))
+      }
     })
   })
   

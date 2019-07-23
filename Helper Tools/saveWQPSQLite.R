@@ -9,19 +9,25 @@ library(dbplyr)
 #' @param dir String, path of directory with datasets
 #' @param constituents String vector, names of constituent files
 
-saveWQPSQLite <- function(dir, constituents) {
+saveCSVs(dir, constituents) {
+  
+  setwd(dir)
+
+  for (i in constituents) {
+   path <- paste0("wqp_", i, "_indexed.gpkg")
+   data <- st_read(path)
+   coords <- as.data.frame(st_coordinates(data))
+   data_xy <- mutate(data, X = pull(coords, X), Y = pull(coords, Y)) %>% st_set_geometry(NULL)
+   write_csv(data_xy, paste0("wqp_", i, "_indexed", ".csv"))
+  }
+  
+}
+
+saveWQPSQLite <- function(dir) {
   
   setwd(dir)
   
-  for (i in constituents) {
-    path <- paste0("wqp_", i, "_indexed.gpkg")
-    data <- st_read(path)
-    coords <- as.data.frame(st_coordinates(data))
-    data_xy <- mutate(data, X = pull(coords, X), Y = pull(coords, Y)) %>% st_set_geometry(NULL)
-    write_csv(data_xy, paste0("wqp_", i, "_indexed", ".csv"))
-  }
-  
-  flowlines <- readRDS("NHDPlusNationalData/nhdplus_flowline.rds")
+  flowlines <- readRDS("../NHDPlusNationalData/nhdplus_flowline.rds")
   coverageInfo <- select(flowlines, COMID, TotDASqKM, Pathlength) %>%
     st_set_geometry(NULL)
   
@@ -62,6 +68,9 @@ saveWQPSQLite <- function(dir, constituents) {
   copy_to(db, tss_data, temporary = F)
 }
 
-dir <- ""
+dir <- "Datasets/wqp_Constituents/"
 constituents <- c("doc", "chlorophyll", "tss", "All", "secchi")
-saveWQPSQLite(dir, constituents)
+
+#Run saveCSVs and move resulting files to folder called 'CSVs' in the same directory before running saveWQPSQLite
+saveCSVs(dir, constituents)
+# saveWQPSQLite(dir)
