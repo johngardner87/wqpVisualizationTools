@@ -729,7 +729,8 @@ function(input, output, session) {
           group = "markers",
           label = ~MonitoringLocationName)
     } else {
-      hucDetailPal <- colorNumeric("YlOrRd", range(pull(filtered_unique(), resultCount)))
+      # hucDetailPal <- colorNumeric("YlOrRd", range(pull(filtered_unique(), resultCount)))
+      hucDetailPal <- colorBin("YlOrRd", range(pull(filtered_unique(), resultCount)), bins = c(0, 5, 10, 20, 50, 100, 500, 1000, 5000, 10000, Inf))
       # hucDetailPal <- colorQuantile("YlOrRd", range(pull(filtered_unique(), resultCount)), n = 5)
       markers %>% addCircleMarkers(radius = 3,
                                    stroke = F,
