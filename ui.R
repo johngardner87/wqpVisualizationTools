@@ -34,9 +34,7 @@ fluidPage(
   
   # For whatever reason displaying output.select in this way fixes major bug 
   # when displaying pop-up coverage plot for second time
-  absolutePanel(h4(textOutput("select"))),
-  
-  # absolutePanel(class = "coveragePlot", fixed = T, top = 200, left = "auto", right = 300, bottom = "auto", width = "auto", height = "auto", h4(textOutput("showCoverage"), h4(textOutput("select")))),
+  # absolutePanel(h4(textOutput("select"))),
     
   absolutePanel(id = "inputs", class = "inputs", fixed = T, draggable = TRUE, top = 400, left = "auto", right = 175, 
                 bottom = "auto", width = 200, height = "auto",
@@ -70,7 +68,7 @@ fluidPage(
   #                 # h4(paste0("Coverage in the", output$selectedHUCName, ":")),
   #                 h4(textOutput("selectedHUCName")),
   # 
-  #                 plotOutput("coverage1"), #%>% withSpinner(type=2, color.background="white")
+  #                 plotOutput("coverage1"),
   #                 selectInput("covgAxis", "Coverage Metric:", 
   #                             choices = c("Upstream Catchment Area" = "catchment", "Distance to Outlet" = "Pathlength"))
   #                             )
@@ -79,8 +77,7 @@ fluidPage(
                 bottom = "auto", width = "auto", height = "auto",
                 h4(textOutput("selectedHUCName")),
                 conditionalPanel(condition = "output.showCoverage", style = "margin-bottom: 20px;",
-                                 plotOutput("coverage1"), #%>% withSpinner(type=2, color.background="white")
-                                 # plotlyOutput("coverage1"), #%>% withSpinner(type=2, color.background="white")
+                                 plotOutput("coverage1"),
                                  selectInput("covgAxis", "Coverage Metric:",
                                              choices = c("Upstream Catchment Area" = "catchment", "Distance to Outlet" = "Pathlength"))
                                  )

@@ -6,9 +6,7 @@ library(shiny)
 library(plotly)
 library(leaflet)
 library(sf)
-library(shinycssloaders)
 library(shinyalert)
-library(crosstalk)
 # library(DBI)
 library(RSQLite)
 
@@ -116,6 +114,8 @@ function(input, output, session) {
   options(opacityDim = 0)
   outputOptions(output, "select", suspendWhenHidden = FALSE)
   outputOptions(output, "showCoverage", suspendWhenHidden = FALSE)
+  outputOptions(output, "select")
+  outputOptions(output, "showCoverage")
 
   observe({
 
@@ -150,8 +150,9 @@ function(input, output, session) {
       hucMap %>% 
         addPolylines(data = upperBoundaries,
                     fillOpacity = 0,
-                    weight = 5,
-                    color = "gray",
+                    opacity = 1,
+                    weight = 3,
+                    color = "lightgray",
                     group = "upperBoundaries",
                     options = pathOptions(pane = "larger")
         )
@@ -458,7 +459,7 @@ function(input, output, session) {
             ),
             column(4,
                    div(class="widget",
-                       leafletOutput(outputId = "hucDetail") %>% withSpinner(type=2, color.background="white")
+                       leafletOutput(outputId = "hucDetail")
                    )
             )
           ),
@@ -613,17 +614,17 @@ function(input, output, session) {
           
       })
 
-      hucDetailPal <- colorNumeric("YlOrRd", range(pull(filtered_unique(), resultCount)))
-      leafletProxy("hucDetail", data=filtered_unique()) %>%
-        addCircleMarkers(radius = 3,
-                         stroke = F,
-                         color = ~hucDetailPal(resultCount),
-                         # opacity = 0.8,
-                         # fillOpacity = 0.2,
-                         opacity = 1,
-                         fillOpacity = 1,
-                         group = "markers",
-                         label = ~MonitoringLocationName)
+      # hucDetailPal <- colorNumeric("YlOrRd", range(pull(filtered_unique(), resultCount)))
+      # leafletProxy("hucDetail", data=filtered_unique()) %>%
+      #   addCircleMarkers(radius = 3,
+      #                    stroke = F,
+      #                    color = ~hucDetailPal(resultCount),
+      #                    # opacity = 0.8,
+      #                    # fillOpacity = 0.2,
+      #                    opacity = 1,
+      #                    fillOpacity = 1,
+      #                    group = "markers",
+      #                    label = ~MonitoringLocationName)
 
       # observeEvent(event_data("plotly_relayout"), {
       #   d <- event_data("plotly_relayout")
