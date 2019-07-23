@@ -144,7 +144,7 @@ function(input, output, session) {
       clearShapes() %>% 
       addMapPane("larger", zIndex = 440) %>% # Region boundaries for context
       addMapPane("main", zIndex = 420) %>%   # Main boundaries
-      addMapPane("selections", zIndex = 430) # Selected boundaries
+      addMapPane("selections", zIndex = 450) # Selected boundaries
     
     if(hucLevel > 2) { # Only adds context boundaries for HUCs greater than 2
       hucMap %>% 
@@ -332,12 +332,6 @@ function(input, output, session) {
       if(!is.null(selectedHucBound[[constCol]]) && selectedHucBound[[constCol]] != 0) {
         
         # -------------- LOADING IN WQP AND NHD DATA
-        # Loading relevant wqp data and flowline data
-        # wqp_path <- sprintf(
-        #   "Datasets/wqp_Constituents/GPKGs/wqp_%s_indexed.gpkg", input$constInput)
-        # wqp_query <- sprintf(
-        #   "SELECT * FROM wqp_%s_indexed WHERE HUCEightDigitCode LIKE '%s%%'", input$constInput, hucSelected)
-        # selected_wqp_data <- st_read(wqp_path, query=wqp_query)
         wqp_path <- sprintf(
           "Datasets/wqp_Constituents/wqp_%s_indexed.sqlite", input$constInput)
         db <- dbConnect(SQLite(), wqp_path)
@@ -416,8 +410,8 @@ function(input, output, session) {
       )
     } else {
       print("Rendering second page")
+      
       #selectDates tolower(input$restrict)
-
       # jsSlider <- paste0("$(function() {
       #                     setTimeout(function(){ 
       #                     if (", "true",")
@@ -717,16 +711,12 @@ function(input, output, session) {
   })
   
   # Drawing of points based on selection options
-  observeEvent(c(input$refresh, input$cluster, input$selectLocationType, input$selectDates, input$selectCatchment, input$selectStreamNames, input$constInput2), {
+  observeEvent(c(input$refresh, input$cluster, input$selectLocationType, 
+                 input$selectDates, input$selectCatchment, input$selectStreamNames, input$constInput2), {
     #Fix for crosstalk / leaflet issue when filter selects zero points
     markers <- leafletProxy("hucDetail", data = filtered_unique())
     clearGroup(markers, group="markers")
     req(nrow(filtered_unique()) != 0)
-    
-    # Fix for crosstalk / leaflet attempts to filter after a plot-based selection was made
-    # Doesn't actually work
-    # key$clearSelection()
-    # map_key$clearSelection("hucDetail")
     
     if(!is.null(input$cluster) && input$cluster) {
       markers %>%
@@ -740,6 +730,7 @@ function(input, output, session) {
           label = ~MonitoringLocationName)
     } else {
       hucDetailPal <- colorNumeric("YlOrRd", range(pull(filtered_unique(), resultCount)))
+      # hucDetailPal <- colorQuantile("YlOrRd", range(pull(filtered_unique(), resultCount)), n = 5)
       markers %>% addCircleMarkers(radius = 3,
                                    stroke = F,
                                    color = ~hucDetailPal(resultCount),

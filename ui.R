@@ -17,7 +17,7 @@ fluidPage(
     includeCSS("styles.css")
   ),
   
-  # Inspired from https://github.com/akl21/hbef
+  # Inspired by https://github.com/akl21/hbef
   # This is here and not the the css file because for some reason the default
   # styles for the range sliders overwrite the custom style sheet, not sure why
   tags$style(type = "text/css", "
@@ -61,24 +61,12 @@ fluidPage(
                                 actionButton("zoom", "Show me more!", style = "margin-bottom: 20px;")
                 )
   ),
-  # conditionalPanel(condition = "output.showCoverage",
-  #   absolutePanel(id = "coveragePlot", class = "inputs", draggable = T, top = "auto", left = 40, right = "auto",
-  #                 bottom = 200, width = 400, height = "auto",
-  # 
-  #                 # h4(paste0("Coverage in the", output$selectedHUCName, ":")),
-  #                 h4(textOutput("selectedHUCName")),
-  # 
-  #                 plotOutput("coverage1"),
-  #                 selectInput("covgAxis", "Coverage Metric:", 
-  #                             choices = c("Upstream Catchment Area" = "catchment", "Distance to Outlet" = "Pathlength"))
-  #                             )
-  # ),
   absolutePanel(id = "coveragePlot", class = "coveragePlot", draggable = T, top = 225, left = 100, right = "auto",
-                bottom = "auto", width = "auto", height = "auto",
+                bottom = "auto", width = "350px", height = "auto",
                 h4(textOutput("selectedHUCName")),
                 conditionalPanel(condition = "output.showCoverage", style = "margin-bottom: 20px;",
-                                 plotOutput("coverage1"),
-                                 selectInput("covgAxis", "Coverage Metric:",
+                                 plotOutput("coverage1", width = "auto"),
+                                 selectInput("covgAxis", "Coverage Metric:", width = "auto",
                                              choices = c("Upstream Catchment Area" = "catchment", "Distance to Outlet" = "Pathlength"))
                                  )
   ),
