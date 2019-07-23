@@ -28,9 +28,6 @@ install.packages("tidyverse", "feather", "shiny", "plotly", "leaflet", "sf", "sh
     - [Download the processed dataset from the Google Drive]()
 
     - OR: Download the datasets from their original sources:
-        - [Harmonized AquaSAT dataset with data from the WQP]()
-        - [Watershed Boundary Dataset]()
-        - [National Hydrography Dataset]()
         - Go through the process outlined in the [helper tool documentation](docs/HELPERTOOLS.md)
 - Set the working directory
 ```R
