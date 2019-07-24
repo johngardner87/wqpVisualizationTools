@@ -21,7 +21,7 @@ For the script of harmonization, please see [code]().  -->
 ## Run the app locally
 - Install necessary libraries in R
 ```R
-install.packages("tidyverse", "feather", "shiny", "plotly", "leaflet", "sf", "shinycssloaders", "shinyalert", "DBI", "RSQLite")
+install.packages("tidyverse", "feather", "shiny", "shinyjs", "plotly", "leaflet", "sf", "shinycssloaders", "shinyalert", "DBI", "RSQLite")
 ```
 - Clone the repository
 - Download the datasets

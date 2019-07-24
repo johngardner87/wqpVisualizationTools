@@ -463,8 +463,8 @@ function(input, output, session) {
                        splitLayout(cellWidths = c("60%", "40%"),
                          sliderInput("selectDates", "Filter by date:", min = firstDate, max = lastDate, 
                                      value = c(firstDate, lastDate), width = "90%"),
-                         sliderInput("selectCatchment", "Filter by upstream catchment area (sq. km):", min = 0, max = ceiling(highCatchment), 
-                                     value = c(0, highCatchment), width = "100%")
+                         sliderInput("selectCatchment", "Filter by upstream catchment area (sq. km):", min = lowCatchment, max = ceiling(highCatchment), 
+                                     value = c(lowCatchment, highCatchment), width = "100%")
                        ),
                        # sliderInput("selectDates", "Filter by date:", min = firstDate, max = lastDate, 
                        #             value = c(firstDate, lastDate), width = "95%"),
@@ -517,7 +517,12 @@ function(input, output, session) {
       # Lists and dates for select inputs
       locationTypeNames <- as.list(unique(pull(selected_wqp_data_coverage, ResolvedMonitoringLocationTypeName)))
       streamNames <- as.list(unique(pull(selected_wqp_data_coverage, MonitoringLocationName)))
+      
       highCatchment <- max(pull(selected_wqp_data_coverage, TotDASqKM), na.rm = T)
+      #Prevents issue with filtering when no catchment info is available (Hawaii, Alaska, etc.)
+      lowCatchment <- ifelse(is.infinite(highCatchment), NA, 0)
+      highPathlength <- max(pull(selected_wqp_data_coverage, Pathlength), na.rm = T)
+      lowPathlength <- ifelse(is.infinite(highPathlength), NA, 0)
       
       selectedDates <- as.Date(pull(selected_wqp_data_coverage, date_time))
       #Filter out unwanted dates
@@ -535,8 +540,13 @@ function(input, output, session) {
           filtered <- filter(filtered, !is.na(landsat_id))
         }
         if (!is.null(input$selectCatchment)) {
-          filtered <- filter(filtered,
-                             TotDASqKM >= input$selectCatchment[1] & TotDASqKM <= input$selectCatchment[2])
+          if (input$covgAxis2 == "catchment") {
+            filtered <- filter(filtered,
+                               TotDASqKM >= input$selectCatchment[1] & TotDASqKM <= input$selectCatchment[2])
+          } else {
+            filtered <- filter(filtered,
+                               Pathlength >= input$selectCatchment[1] & Pathlength <= input$selectCatchment[2])
+          }
         }
         if (!is.null(input$selectLocationType)) {
           filtered <- filter(filtered, ResolvedMonitoringLocationTypeName %in% input$selectLocationType)
@@ -563,8 +573,13 @@ function(input, output, session) {
           filtered <- filter(filtered, !is.na(landsat_id))
         }
         if (!is.null(input$selectCatchment)) {
-          filtered <- filter(filtered,
-                             TotDASqKM >= input$selectCatchment[1] & TotDASqKM <= input$selectCatchment[2])
+          if (input$covgAxis2 == "catchment") {
+            filtered <- filter(filtered,
+                               TotDASqKM >= input$selectCatchment[1] & TotDASqKM <= input$selectCatchment[2])
+          } else {
+            filtered <- filter(filtered,
+                               Pathlength >= input$selectCatchment[1] & Pathlength <= input$selectCatchment[2])
+          }
         }
         if (!is.null(input$selectLocationType)) {
           filtered <- filter(filtered, ResolvedMonitoringLocationTypeName %in% input$selectLocationType)
@@ -702,12 +717,30 @@ function(input, output, session) {
           write.csv(data, file, row.names = F)
         }
       )
+      
+      #sliderInput("selectCatchment", "Filter by upstream catchment area (sq. km):", min = lowCatchment, max = ceiling(highCatchment), 
+      #            value = c(lowCatchment, highCatchment), width = "100%")
+      
+      observeEvent(input$covgAxis2, {
+        if(!is.null(input$covgAxis2)) {
+          if (input$covgAxis2 == "catchment") {
+            updateSliderInput(session, "selectCatchment", "Filter by upstream catchment area (sq. km):", 
+                              min = lowCatchment, max = ceiling(highCatchment), value = c(lowCatchment, highCatchment))
+          } else {
+            updateSliderInput(session, "selectCatchment", "Filter by distance to outlet (km):", 
+                              min = lowPathlength, max = ceiling(highPathlength), value = c(lowPathlength, highPathlength))
+          }
+        }
+      })
     }
   })
   
   # Drawing of points based on selection options
   observeEvent(c(input$refresh, input$cluster, input$selectLocationType, input$satFilter,
                  input$selectDates, input$selectCatchment, input$selectStreamNames, input$constInput2), {
+                   
+    js$selectionReset()
+                   
     #Fix for crosstalk / leaflet issue when filter selects zero points
     markers <- leafletProxy("hucDetail", data = filtered_unique())
     clearGroup(markers, group="markers")
