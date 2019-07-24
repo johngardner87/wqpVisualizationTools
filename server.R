@@ -7,8 +7,8 @@ library(plotly)
 library(leaflet)
 library(sf)
 library(shinyalert)
-# library(DBI)
 library(RSQLite)
+library(shinyjs)
 
 # Server ------------------------------------------------------------------
 
@@ -110,8 +110,6 @@ function(input, output, session) {
                        "10" = "Watershed",
                        "12" = "Subwatershed")
   
-  # options(opacityDim = 0, persistent = F, selected = attrs_selected(fill="toself", fillcolor = "green"))
-  options(opacityDim = 0)
   outputOptions(output, "select", suspendWhenHidden = FALSE)
   outputOptions(output, "showCoverage", suspendWhenHidden = FALSE)
   outputOptions(output, "select")
@@ -423,6 +421,7 @@ function(input, output, session) {
       
       output$zoomedIn <- renderUI({
         fluidPage(
+          
           class = "details",
           ## Header ---------
           fluidRow(
@@ -656,14 +655,14 @@ function(input, output, session) {
       output$coverage <- renderPlotly({
         if (input$covgAxis2 == "catchment") {
           if (input$covgLog2 == "Linear") {
-            covg <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~TotDASqKM, text=~MonitoringLocationName) %>% 
+            covg <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~TotDASqKM, text=~MonitoringLocationName, source = "selection", customdata = ~SiteID, key = ~as.character(date)) %>% 
               add_markers(color=~harmonized_parameter) %>%
               layout(xaxis=list(title = "Date"), yaxis=list(title="Upstream Catchment Area (sq. km)"), showlegend = T) %>% 
               highlight("plotly_selected", off = "plotly_deselect") %>%
               # rangeslider() #%>% 
               toWebGL()
           } else {
-            covg <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~TotDASqKM, text=~MonitoringLocationName) %>% 
+            covg <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~TotDASqKM, text=~MonitoringLocationName, source = "selection", customdata = ~SiteID, key = ~as.character(date)) %>% 
               add_markers(color=~harmonized_parameter) %>%
               layout(xaxis=list(title = "Date"), yaxis=list(title="Upstream Catchment Area (sq. km)", type = "log"), showlegend = T) %>% 
               highlight("plotly_selected", off = "plotly_deselect") %>%
@@ -671,13 +670,13 @@ function(input, output, session) {
           }
         } else {
           if (input$covgLog2 == "Linear") {
-            covg <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~Pathlength, text=~MonitoringLocationName) %>% 
+            covg <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~Pathlength, text=~MonitoringLocationName, source = "selection", customdata = ~SiteID, key = ~as.character(date)) %>% 
               add_markers(color=~harmonized_parameter) %>%
               layout(xaxis=list(title = "Date"), yaxis=list(title="Distance to Outlet (km)"), showlegend = T) %>% 
               highlight("plotly_selected", off = "plotly_deselect") %>%
               toWebGL()
           } else {
-            covg <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~Pathlength, text=~MonitoringLocationName) %>% 
+            covg <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~Pathlength, text=~MonitoringLocationName, source = "selection", customdata = ~SiteID, key = ~as.character(date)) %>% 
               add_markers(color=~harmonized_parameter) %>%
               layout(xaxis=list(title = "Date"), yaxis=list(title="Distance to Outlet (km)", type = "log"), showlegend = T) %>% 
               highlight("plotly_selected", off = "plotly_deselect") %>%
@@ -783,16 +782,35 @@ function(input, output, session) {
     })
     
     output$timeSeries <- renderPlotly({
-      if(input$timeSeriesLog == "Log") {
-        timeSeries <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
-          add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
-          layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit", type="log"), showlegend = T) %>%
-          highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T))
+      selectionEvent <- event_data("plotly_selected", source = "selection") #%>% select(x, customdata)
+      if (is.null(selectionEvent)) {
+        if(input$timeSeriesLog == "Log") {
+          timeSeries <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
+            add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
+            layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit", type="log"), showlegend = T) %>%
+            highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T))
+        } else {
+          timeSeries <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
+            add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
+            layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit"), showlegend = T) %>%
+            highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T))
+        }
       } else {
-        timeSeries <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
-          add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
-          layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit"), showlegend = T) %>%
-          highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T))
+        selected_data <- filtered_wqp_data_coverage() %>%
+          mutate(dateChar = as.character(date)) %>%
+          semi_join(selectionEvent, by = c("SiteID" = "customdata", "dateChar" = "key"))
+        
+        if(input$timeSeriesLog == "Log") {
+          timeSeries <- plot_ly(selected_data, x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
+            add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
+            layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit", type="log"), showlegend = T) %>%
+            highlight("plotly_selected", off = "plotly_deselect")
+        } else {
+          timeSeries <- plot_ly(selected_data, x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
+            add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
+            layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit"), showlegend = T) %>%
+            highlight("plotly_selected", off = "plotly_deselect")
+        }
       }
     })
   })
@@ -809,7 +827,10 @@ function(input, output, session) {
     # output$selectedHUCName <- renderText("Select a watershed...")
     
     output$hucDetail <- NULL
+    
+    js$selectionReset()
     output$coverage <- NULL
+    
     output$zoomedIn <- NULL
     # selectedHucBound <<- NULL
   })

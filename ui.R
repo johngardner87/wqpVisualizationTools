@@ -6,6 +6,7 @@ library(plotly)
 library(leaflet)
 library(sf)
 library(shinyalert)
+library(shinyjs)
 
 # UI Layout ---------------------------------------------------------------
 
@@ -13,6 +14,10 @@ fluidPage(
   
   class="hucMap",
   useShinyalert(),
+  
+  useShinyjs(),
+  extendShinyjs(text = "shinyjs.selectionReset = function() { Shiny.setInputValue('plotly_selected-selection', 'null'); }"),
+  
   tags$head(
     includeCSS("styles.css")
   ),
