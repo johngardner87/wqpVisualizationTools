@@ -41,39 +41,49 @@ fluidPage(
   # when displaying pop-up coverage plot for second time
   # absolutePanel(h4(textOutput("select"))),
     
-  absolutePanel(id = "inputs", class = "inputs", fixed = T, draggable = TRUE, top = 400, left = "auto", right = 175, 
-                bottom = "auto", width = 200, height = "auto",
+  absolutePanel(id = "inputs", class = "inputs", fixed = T, draggable = TRUE, top = 75, left = "auto", right = 10, 
+                bottom = "auto", width = 400, height = "auto",
                 
                 h2("Water Quality Portal"),
                 
-                selectInput(inputId = "hucInput",
-                            label = "HUC Level",
-                            # choices = c(2, 4, 6, 8, 10, 12)),
-                            choices = c(2, 4, 6, 8),
-                            selected = 4),
+                splitLayout(cellWidths = c("25%", "75%"),
+                  selectInput(inputId = "hucInput",
+                              label = "HUC Level",
+                              # choices = c(2, 4, 6, 8, 10, 12)),
+                              choices = c(2, 4, 6, 8),
+                              selected = 4),
+                  
+                  selectInput(inputId = "constInput",
+                              label = "Constituent",
+                              choices = c("All", 
+                                          "Chlorophyll" = "chlorophyll", 
+                                          "Dissolved Organic Carbon (doc)" = "doc", 
+                                          "Turbidity (secchi)" = "secchi", 
+                                          "Total Suspended Solids (tss)" = "tss"),
+                              multiple = F,
+                              selected = "All")
+                ),
                 
-                selectInput(inputId = "constInput",
-                            label = "Constituent",
-                            choices = c("All", 
-                                        "Chlorophyll" = "chlorophyll", 
-                                        "Dissolved Organic Carbon (doc)" = "doc", 
-                                        "Turbidity (secchi)" = "secchi", 
-                                        "Total Suspended Solids (tss)" = "tss"),
-                            multiple = F,
-                            selected = "All"),
-                
+                div(class = "coveragePlot",
+                    h4(textOutput("selectedHUCName")),
+                    conditionalPanel(condition = "output.showCoverage", style = "margin-bottom: 10px;",
+                                     plotOutput("coverage1", width = "auto"),
+                                     selectInput("covgAxis", "Coverage Metric:", width = "auto",
+                                                 choices = c("Upstream Catchment Area" = "catchment", "Distance to Outlet" = "Pathlength"))
+                    )
+                ),
                 conditionalPanel(condition = "output.select",
-                                actionButton("zoom", "Show me more!", style = "margin-bottom: 20px;")
+                                 actionButton("zoom", "Show me more!", style = "margin-top:20px", width = "100%")
                 )
   ),
-  absolutePanel(id = "coveragePlot", class = "coveragePlot", draggable = T, top = 225, left = 100, right = "auto",
-                bottom = "auto", width = "350px", height = "auto",
-                h4(textOutput("selectedHUCName")),
-                conditionalPanel(condition = "output.showCoverage", style = "margin-bottom: 20px;",
-                                 plotOutput("coverage1", width = "auto"),
-                                 selectInput("covgAxis", "Coverage Metric:", width = "auto",
-                                             choices = c("Upstream Catchment Area" = "catchment", "Distance to Outlet" = "Pathlength"))
-                                 )
-  ),
+  # absolutePanel(id = "coveragePlot", class = "coveragePlot", draggable = T, top = 225, left = 100, right = "auto",
+  #               bottom = "auto", width = "350px", height = "auto",
+  #               h4(textOutput("selectedHUCName")),
+  #               conditionalPanel(condition = "output.showCoverage", style = "margin-bottom: 20px;",
+  #                                plotOutput("coverage1", width = "auto"),
+  #                                selectInput("covgAxis", "Coverage Metric:", width = "auto",
+  #                                            choices = c("Upstream Catchment Area" = "catchment", "Distance to Outlet" = "Pathlength"))
+  #                                )
+  # ),
   uiOutput("zoomedIn")
 )

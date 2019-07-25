@@ -88,7 +88,7 @@ function(input, output, session) {
       addLayersControl(baseGroups = c("Esri.WorldTopoMap", "Esri.OceanBasemap", "Esri.WorldGrayCanvas", 
                                       "Esri.WorldImagery"), # , "DarkMatter (CartoDB)"),
                        options = layersControlOptions(collapsed = TRUE, autoZIndex = T)) %>%
-      fitBounds(-125, 25, -75, 55) 
+      fitBounds(-110, 25, -75, 50) 
   })
   
   output$selectedHUCName <- renderText("Select a watershed...")

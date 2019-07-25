@@ -13,8 +13,8 @@
   color: white;
   /*background-color: #001A57;*/
   background-color: #012169;
-  padding: 0px 20px 0px 20px;
-  opacity: 0.9;
+  padding: 0px 20px 20px 20px;
+  opacity: 0.8;
   border-radius: 20px;
 }
 
@@ -26,12 +26,12 @@
   border-radius: 20px;*/
   color: black;
   background-color: white;
-  padding: 0px 20px 0px 20px;
-  opacity: 0.9;
-  border-radius: 20px;
-  border-style: solid;
+  padding: 10px 20px 10px 20px;
+  /*opacity: 0.9;*/
+  border-radius: 10px;
+  /*border-style: solid;
   border-color: #012169;
-  border-width: 10px;
+  border-width: 10px;*/
 }
 
 /* Second page */
