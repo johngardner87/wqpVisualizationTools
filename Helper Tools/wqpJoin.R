@@ -14,6 +14,7 @@ library(sf)           # For geographical information data (shapes, boundaries, f
 #'
 wqpJoin <- function(dir, constituents, shape = FALSE) {
   
+  #Comment this out and set working directory manually if it throws an error
   setwd(dir)
   
   # Measurements

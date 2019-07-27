@@ -76,14 +76,5 @@ fluidPage(
                                  actionButton("zoom", "Show me more!", style = "margin-top:20px", width = "100%")
                 )
   ),
-  # absolutePanel(id = "coveragePlot", class = "coveragePlot", draggable = T, top = 225, left = 100, right = "auto",
-  #               bottom = "auto", width = "350px", height = "auto",
-  #               h4(textOutput("selectedHUCName")),
-  #               conditionalPanel(condition = "output.showCoverage", style = "margin-bottom: 20px;",
-  #                                plotOutput("coverage1", width = "auto"),
-  #                                selectInput("covgAxis", "Coverage Metric:", width = "auto",
-  #                                            choices = c("Upstream Catchment Area" = "catchment", "Distance to Outlet" = "Pathlength"))
-  #                                )
-  # ),
   uiOutput("zoomedIn")
 )
