@@ -215,6 +215,7 @@ function(input, output, session) {
       print(paste("hucLevel", as.numeric(hucLevel)))
       output$select <- reactive({F})
     } else {                                                   # If the user changed the constituent, has to redraw selection
+      output$select <- reactive({T})
       selectedPoly <- leafletProxy("wqpMap", data=selectedHucBound) %>%
         removeShape(paste(hucSelected, "Selected", sep=""))
       print("non-selected poly removed")
