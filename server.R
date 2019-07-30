@@ -324,8 +324,9 @@ function(input, output, session) {
           )
       }
       print(paste("you've selected: ", hucSelected, sep=""))
-      print(paste(selectedHucBound$NAME, hucRegions[sprintf("%02s", str_length(hucSelected))]))
-      output$selectedHUCName <- renderText(paste(selectedHucBound$NAME, hucRegions[sprintf("%02s", str_length(hucSelected))]))
+      if (Sys.info()['sysname'] == "windows")
+      print(paste(selectedHucBound$NAME, hucRegions[str_pad(str_length(hucSelected), 2, pad = "0")]))
+      output$selectedHUCName <- renderText(paste(selectedHucBound$NAME, hucRegions[str_pad(str_length(hucSelected), 2, pad = "0")]))
       print(Sys.time() - start)
       
       if(!is.null(selectedHucBound[[constCol]]) && selectedHucBound[[constCol]] != 0) {
@@ -427,7 +428,7 @@ function(input, output, session) {
           ## Header ---------
           fluidRow(
             column(10,
-                   tags$h1("Coverage in the ", strong(selectedHucBound$NAME), hucRegions[sprintf("%02s", str_length(hucSelected))])
+                   tags$h1("Coverage in the ", strong(selectedHucBound$NAME), hucRegions[str_pad(str_length(hucSelected), 2, pad = "0")])
                    ),
             column(2,
                    actionButton("back", "Take me back!", 
@@ -479,7 +480,7 @@ function(input, output, session) {
                                                choices = getConstChoices(input$constInput),
                                                multiple = F),
                                    selectInput(inputId = "satFilter",
-                                               label = "Filter by satellite overpass:", width = "100%",
+                                               label = "Filter by satellite overpass (Landsat 5, 7, and 8):", width = "100%",
                                                choices = c("All points" = "all", "Points that align with a satellite overpass" = "sat"),
                                                multiple = F)
                                    ),
@@ -759,8 +760,9 @@ function(input, output, session) {
           label = ~MonitoringLocationName)
     } else {
       # hucDetailPal <- colorNumeric("YlOrRd", range(pull(filtered_unique(), resultCount)))
-      hucDetailPal <- colorBin("YlOrRd", range(pull(filtered_unique(), resultCount)), bins = c(0, 5, 10, 20, 50, 100, 500, 1000, 5000, 10000, Inf))
       # hucDetailPal <- colorQuantile("YlOrRd", range(pull(filtered_unique(), resultCount)), n = 5)
+      hucDetailPal <- colorBin("YlOrRd", range(pull(filtered_unique(), resultCount)), 
+                               bins = c(0, 5, 10, 20, 50, 100, 500, 1000, 5000, 10000, Inf))
       markers %>% addCircleMarkers(radius = 3,
                                    stroke = F,
                                    color = ~hucDetailPal(resultCount),
@@ -770,7 +772,8 @@ function(input, output, session) {
                                    opacity = 1,
                                    fillOpacity = 1,
                                    group = "markers",
-                                   label = ~MonitoringLocationName)
+                                   label = ~MonitoringLocationName) #%>% 
+      # addLegend(position = "bottomright", pal = hucDetailPal, values = ~resultCount, title = "Measurement Counts")
     }
   })
   
@@ -821,12 +824,12 @@ function(input, output, session) {
         if(input$timeSeriesLog == "Log") {
           timeSeries <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
             add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
-            layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit", type="log"), showlegend = T) %>%
+            layout(xaxis=list(title="Date"), yaxis=list(title="Value", type="log"), showlegend = T) %>%
             highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T))
         } else {
           timeSeries <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
             add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
-            layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit"), showlegend = T) %>%
+            layout(xaxis=list(title="Date"), yaxis=list(title="Value"), showlegend = T) %>%
             highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T))
         }
       } else {
@@ -837,12 +840,12 @@ function(input, output, session) {
         if(input$timeSeriesLog == "Log") {
           timeSeries <- plot_ly(selected_data, x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
             add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
-            layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit", type="log"), showlegend = T) %>%
+            layout(xaxis=list(title="Date"), yaxis=list(title="Value", type="log"), showlegend = T) %>%
             highlight("plotly_selected", off = "plotly_deselect")
         } else {
           timeSeries <- plot_ly(selected_data, x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
             add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
-            layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit"), showlegend = T) %>%
+            layout(xaxis=list(title="Date"), yaxis=list(title="Value"), showlegend = T) %>%
             highlight("plotly_selected", off = "plotly_deselect")
         }
       }
