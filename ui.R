@@ -44,7 +44,7 @@ fluidPage(
   absolutePanel(id = "inputs", class = "inputs", fixed = T, draggable = TRUE, top = 75, left = "auto", right = 10, 
                 bottom = "auto", width = 400, height = "auto",
                 
-                h2("Water Quality Portal"),
+                h2("pondr"),
                 
                 splitLayout(cellWidths = c("25%", "75%"),
                   selectInput(inputId = "hucInput",

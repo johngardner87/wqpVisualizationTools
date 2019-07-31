@@ -1,4 +1,12 @@
 /* Initial leaflet map */
+@import url('https://fonts.googleapis.com/css?family=Quicksand:600&display=swap');
+
+h2 {
+  font-family: 'Quicksand', sans-serif;
+  font-size: 40px;
+  margin-top: 10px;
+}
+
 .hucMap {
   position: fixed;
   top:0;
@@ -26,7 +34,7 @@
   border-radius: 20px;*/
   color: black;
   background-color: white;
-  padding: 10px 20px 10px 20px;
+  padding: 5px 20px 5px 20px;
   /*opacity: 0.9;*/
   border-radius: 10px;
   /*border-style: solid;
