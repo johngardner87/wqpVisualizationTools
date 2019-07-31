@@ -7,6 +7,7 @@ library(leaflet)
 library(sf)
 library(shinyalert)
 library(shinyjs)
+library(shinybusy)
 
 # UI Layout ---------------------------------------------------------------
 
@@ -14,6 +15,7 @@ fluidPage(
   
   class="hucMap",
   useShinyalert(),
+  add_busy_bar(color = "#012169"),
   
   useShinyjs(),
   extendShinyjs(text = "shinyjs.selectionReset = function() { Shiny.setInputValue('plotly_selected-selection', 'null'); }"),

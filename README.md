@@ -1,6 +1,6 @@
 # wqpVisualizationTools
 
-Developed by a team of data scientists and ecologists at Duke University, wqpVisualizationTools is an RShiny based visualization tool for US national water quality data. The web app provides a user-friendly interface to **explore**, **filter**, and **download** water quality and hydrology data from the [Water Quality Portal](https://www.waterqualitydata.us), [Watershed Boundary Dataset](https://www.usgs.gov/core-science-systems/ngp/national-hydrography/watershed-boundary-dataset), and the [National Hydrography Dataset](https://www.usgs.gov/core-science-systems/ngp/national-hydrography).
+Developed by a team of data scientists and ecologists at Duke University, Pondr is an RShiny based visualization tool for US national water quality data. The web app provides a user-friendly interface to **explore**, **filter**, and **download** water quality and hydrology data from the [Water Quality Portal](https://www.waterqualitydata.us), [Watershed Boundary Dataset](https://www.usgs.gov/core-science-systems/ngp/national-hydrography/watershed-boundary-dataset), and the [National Hydrography Dataset](https://www.usgs.gov/core-science-systems/ngp/national-hydrography).
 
 ---
 <!-- ## Motivation and target user groups
@@ -21,7 +21,7 @@ For the script of harmonization, please see [code]().  -->
 ## Run the app locally
 - Install necessary libraries in R
 ```R
-install.packages("tidyverse", "feather", "shiny", "shinyjs", "plotly", "leaflet", "sf", "shinycssloaders", "shinyalert", "DBI", "RSQLite")
+install.packages("tidyverse", "feather", "shiny", "shinyjs", "plotly", "leaflet", "sf", "shinycssloaders", "shinybusy", "shinyalert", "DBI", "RSQLite")
 ```
 - Clone the repository
 - Download the datasets
