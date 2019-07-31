@@ -1,4 +1,12 @@
 /* Initial leaflet map */
+@import url('https://fonts.googleapis.com/css?family=Quicksand:600&display=swap');
+
+h2 {
+  font-family: 'Quicksand', sans-serif;
+  font-size: 40px;
+  margin-top: 10px;
+}
+
 .hucMap {
   position: fixed;
   top:0;
@@ -9,13 +17,29 @@
   padding: 0;
 }
 
-#inputs {
+.inputs {
   color: white;
   /*background-color: #001A57;*/
   background-color: #012169;
   padding: 0px 20px 20px 20px;
-  opacity: 0.9;
+  opacity: 0.85;
   border-radius: 20px;
+}
+
+.coveragePlot {
+  /*color: white;
+  background-color: #012169;
+  padding: 0px 20px 0px 20px;
+  opacity: 0.9;
+  border-radius: 20px;*/
+  color: black;
+  background-color: white;
+  padding: 5px 20px 5px 20px;
+  /*opacity: 0.9;*/
+  border-radius: 10px;
+  /*border-style: solid;
+  border-color: #012169;
+  border-width: 10px;*/
 }
 
 /* Second page */
@@ -49,4 +73,8 @@
   height: 100%;
   margin-bottom:20px;
   margin-right:-5px;
+}
+
+.shiny-split-layout > div {
+  overflow: visible;
 }

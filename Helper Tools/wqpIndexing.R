@@ -11,9 +11,12 @@ library(nhdplusTools)
 #' @param constituents String vector, constituent types to filter by, currently accepts "chlorophyll", "doc",                                        "secchi", "tss"
 #'
 wqpIndexing <- function(dir, constituents) {
+  
+  #Comment this out and set working directory manually if it throws an error
   setwd(dir)
+  
   network <- readRDS("Datasets/NHDPlusNationalData/nhdplus_flowline.rds")
-  # all_measurements_indexed <- NULL
+
   for (i in constituents) {
     const_measurements <- st_read(paste0("Datasets/wqp_Constituents/wqp_", i, ".gpkg"))
     
@@ -22,24 +25,30 @@ wqpIndexing <- function(dir, constituents) {
     Sys.time() - start
     
     measurements_indexed <- mutate(const_measurements, COMID = pull(nhdIndices, COMID))
-    st_write(measurements_indexed, paste0("wqp_", i, "_indexed.gpkg"), delete_layer = T)
-    # all_measurements_indexed <- rbind(all_measurements_indexed, measurements_indexed)
+    st_write(measurements_indexed, paste0("Datasets/wqp_Constituents/wqp_", i, "_indexed.gpkg"), delete_layer = T)
   }
-  # st_write(all_measurements_indexed, paste0("wqp_", "All", "_indexed.gpkg"), delete_layer = T)
 }
 
 wqpCombining <- function(dir, constituents) {
+  
+  #Comment this out and set working directory manually if it throws an error
   setwd(dir)
+  
   all_measurements_indexed <- NULL
   for (i in constituents) {
     const_measurement_indexed <- st_read(paste0(dir, "Datasets/wqp_Constituents/wqp_", i, "_indexed.gpkg"))
     all_measurements_indexed <- rbind(all_measurements_indexed, const_measurement_indexed)
   }
-  st_write(all_measurements_indexed, paste0("wqp_", "All", "_indexed.gpkg"), delete_layer = T)
+  st_write(all_measurements_indexed, paste0("Datasets/wqp_Constituents/wqp_", "All", "_indexed.gpkg"), delete_layer = T)
 }
 
 const <- c("chlorophyll", "doc", "tss", "secchi")
 directory <- ""
+
 Start <- Sys.time()
-wqpCombining(directory, const)
+wqpIndexing(directory, const)
 Sys.time() - Start
+
+# Start <- Sys.time()
+# wqpCombining(directory, const)
+# Sys.time() - Start

@@ -6,10 +6,9 @@ library(shiny)
 library(plotly)
 library(leaflet)
 library(sf)
-library(rmapshaper)
-library(shinycssloaders)
 library(shinyalert)
-library(crosstalk)
+library(RSQLite)
+library(shinyjs)
 
 # Server ------------------------------------------------------------------
 
@@ -46,7 +45,36 @@ getBins <- function(hucLevel) {
   }
 }
 
+getConstChoices <- function(constSelected) {
+  choices <- c("All", 
+               "Chlorophyll" = "chlorophyll", 
+               "Dissolved Organic Carbon (doc)" = "doc", 
+               "Turbidity (secchi)" = "secchi", 
+               "Total Suspended Solids (tss)" = "tss")
+  if (constSelected == "All") {
+    return (choices)
+  } else {
+    return (choices[choices == constSelected])
+  }
+}
+
+#sliderInput("selectDates", "Filter by date:", min = firstDate, max = lastDate, 
+#value = c(firstDate, lastDate), width = "95%"),
+
+# sliderInput2 <- function(inputId, label, min, max, value, widthCSS, min_range, max_range){
+#   x <- sliderInput(inputId, label, min, max, value, width = widthCSS)
+#   x$children[[2]]$attribs <- c(x$children[[2]]$attribs, 
+#                                "data-min-interval" = min_range, 
+#                                "data-max-interval" = max_range)
+#   x
+# }
+
 function(input, output, session) {
+  
+  # Main map ---------------------------------------------------------------
+  
+  output$select <- reactive({F})
+  output$showCoverage <- reactive({F})
   
   output$wqpMap <- renderLeaflet({
     # Bounds fit continental US
@@ -60,8 +88,10 @@ function(input, output, session) {
       addLayersControl(baseGroups = c("Esri.WorldTopoMap", "Esri.OceanBasemap", "Esri.WorldGrayCanvas", 
                                       "Esri.WorldImagery"), # , "DarkMatter (CartoDB)"),
                        options = layersControlOptions(collapsed = TRUE, autoZIndex = T)) %>%
-      fitBounds(-100, 25, -75, 55) 
+      fitBounds(-110, 25, -75, 50) 
   })
+  
+  output$selectedHUCName <- renderText("Select a watershed...")
   
   palette = "Blues" #Any pallette, I like YlOrRd or Blues
   
@@ -71,7 +101,7 @@ function(input, output, session) {
   selectedHucBound <- NULL
   filtered_wqp_data_coverage <- NULL
   filtered_unique <- NULL
-  key <- NULL
+  # key <- NULL
   
   hucRegions <- tibble("02" = "",
                        "04" = "Subregion",
@@ -80,14 +110,13 @@ function(input, output, session) {
                        "10" = "Watershed",
                        "12" = "Subwatershed")
   
-  # options(opacityDim = 0, persistent = F, selected = attrs_selected(fill="toself", fillcolor = "green"))
-  options(opacityDim = 0)
+  outputOptions(output, "select", suspendWhenHidden = FALSE)
+  outputOptions(output, "showCoverage", suspendWhenHidden = FALSE)
+  outputOptions(output, "select")
+  outputOptions(output, "showCoverage")
 
-  output$select <- reactive({F})
-  outputOptions(output, "select", suspendWhenHidden = FALSE, priority = 100)
-  
-  # Main map ---------------------------------------------------------------
   observe({
+
     hucLevel <<- input$hucInput
     # hucLevelUp <- as.numeric(hucLevel) - 2
     hucLevelUp <- 2
@@ -113,14 +142,15 @@ function(input, output, session) {
       clearShapes() %>% 
       addMapPane("larger", zIndex = 440) %>% # Region boundaries for context
       addMapPane("main", zIndex = 420) %>%   # Main boundaries
-      addMapPane("selections", zIndex = 430) # Selected boundaries
+      addMapPane("selections", zIndex = 450) # Selected boundaries
     
     if(hucLevel > 2) { # Only adds context boundaries for HUCs greater than 2
       hucMap %>% 
         addPolylines(data = upperBoundaries,
                     fillOpacity = 0,
-                    weight = 5,
-                    color = "gray",
+                    opacity = 1,
+                    weight = 3,
+                    color = "lightgray",
                     group = "upperBoundaries",
                     options = pathOptions(pane = "larger")
         )
@@ -185,6 +215,7 @@ function(input, output, session) {
       print(paste("hucLevel", as.numeric(hucLevel)))
       output$select <- reactive({F})
     } else {                                                   # If the user changed the constituent, has to redraw selection
+      output$select <- reactive({T})
       selectedPoly <- leafletProxy("wqpMap", data=selectedHucBound) %>%
         removeShape(paste(hucSelected, "Selected", sep=""))
       print("non-selected poly removed")
@@ -200,6 +231,11 @@ function(input, output, session) {
                       labelOptions = labelOptions(
                         textsize = "12px"
                       ),
+                      highlight = highlightOptions(
+                        fillOpacity = 0,
+                        bringToFront = TRUE,
+                        sendToBack = TRUE
+                      ),
                       options = pathOptions(pane = "selections")
           )
       } else {
@@ -214,18 +250,15 @@ function(input, output, session) {
                       labelOptions = labelOptions(
                         textsize = "12px"
                       ),
+                      highlight = highlightOptions(
+                        fillOpacity = 0,
+                        bringToFront = TRUE,
+                        sendToBack = TRUE
+                      ),
                       options = pathOptions(pane = "selections")
           )
       }
-      output$select <- reactive({T})
     }
-  })
-  
-  observe({
-    click <- input$wqpMap_shape_click
-    if(is.null(click)) {return()}
-    print("CLICK REGISTERED --------------")
-    print(click$id)
   })
   
   # HUC selection (redraws polygon with red boundary, behaves differently depending on current selection)
@@ -244,6 +277,9 @@ function(input, output, session) {
       hucSelected <<- event$id
       selectedHucBound <<- boundaries %>% 
         filter(.data[[hucColumn]] == hucSelected)
+      output$select <- reactive({T})
+      output$showCoverage <- reactive({T})
+      print("select: T")
       print("selected  huc loaded")
       selectedPoly <- leafletProxy("wqpMap", data=selectedHucBound) %>%
         removeShape(paste(oldHuc, "Selected", sep=""))
@@ -260,6 +296,11 @@ function(input, output, session) {
                       labelOptions = labelOptions(
                         textsize = "12px"
                       ),
+                      highlight = highlightOptions(
+                        fillOpacity = 0,
+                        bringToFront = TRUE,
+                        sendToBack = TRUE
+                      ),
                       options = pathOptions(pane = "selections")
           )
       } else {
@@ -274,17 +315,77 @@ function(input, output, session) {
                       labelOptions = labelOptions(
                         textsize = "12px"
                       ),
+                      highlight = highlightOptions(
+                        fillOpacity = 0,
+                        bringToFront = TRUE,
+                        sendToBack = TRUE
+                      ),
                       options = pathOptions(pane = "selections")
           )
       }
       print(paste("you've selected: ", hucSelected, sep=""))
-      output$select <- reactive({T})
-      print("select: T")
+      if (Sys.info()['sysname'] == "windows")
+      print(paste(selectedHucBound$NAME, hucRegions[str_pad(str_length(hucSelected), 2, pad = "0")]))
+      output$selectedHUCName <- renderText(paste(selectedHucBound$NAME, hucRegions[str_pad(str_length(hucSelected), 2, pad = "0")]))
       print(Sys.time() - start)
+      
+      if(!is.null(selectedHucBound[[constCol]]) && selectedHucBound[[constCol]] != 0) {
+        
+        # -------------- LOADING IN WQP AND NHD DATA
+        wqp_path <- sprintf(
+          "Datasets/wqp_Constituents/wqp_%s_indexed.sqlite", input$constInput)
+        db <- dbConnect(SQLite(), wqp_path)
+        wqp_query <- sprintf(
+          "SELECT * FROM %s_data WHERE HUCEightDigitCode LIKE '%s%%'", input$constInput, hucSelected)
+        selected_wqp_data_coverage <<- tbl(db, sql(wqp_query)) %>%
+          as_tibble() %>%
+          mutate(date_time = as.POSIXct(date_time, format = "%F %T")) %>%
+          mutate(date = as.POSIXct(date, format = "%F")) %>%
+          st_as_sf(coords = c("X", "Y"), crs=4269)
+        
+        coverage_properRange <- selected_wqp_data_coverage %>% 
+          filter(date_time > as.Date("1930-01-01") & date_time < as.Date("2018-04-23")) %>% 
+          filter(TotDASqKM > 0) %>% 
+          filter(Pathlength >= 0)
+        dbDisconnect(db)
+        # ------------- END LOADING IN WQP AND NHD DATA
+        
+        output$coverage1 <- renderPlot({
+          if (input$covgAxis == "catchment") {
+            ggplot(coverage_properRange, aes(x = date, y = TotDASqKM)) +
+              geom_point(aes(color = harmonized_parameter)) + scale_y_log10() + 
+              theme(legend.position = "bottom", legend.title=element_blank()) + labs(x = "Date", y = "Upstream Catchment Area (sq. km)")
+          } else {
+            ggplot(coverage_properRange, aes(x = date, y = Pathlength)) +
+              geom_point(aes(color = harmonized_parameter)) + 
+              theme(legend.position = "bottom", legend.title=element_blank()) + labs(x = "Date", y = "Distance to Outlet (km)")
+          }
+        })
+        
+        # output$coverage1 <- renderPlotly({
+        #   if (input$covgAxis == "catchment") {
+        #     covg <- plot_ly(coverage_properRange, x=~date, y=~TotDASqKM, text=~MonitoringLocationName) %>%
+        #       add_markers(color=~harmonized_parameter) %>%
+        #       layout(xaxis=list(title = "Date"), yaxis=list(title="Upstream Catchment Area", type = "log")) %>%
+        #       toWebGL()
+        #   } else {
+        #     covg <- plot_ly(coverage_properRange, x=~date, y=~Pathlength, text=~MonitoringLocationName) %>%
+        #       add_markers(color=~harmonized_parameter) %>%
+        #       layout(xaxis=list(title = "Date"), yaxis=list(title="Distance to outlet")) %>%
+        #       highlight("plotly_selected", off = "plotly_deselect") %>%
+        #       toWebGL()
+        #   }
+        #   covg
+        # })
+      } else {
+        output$coverage1 <- NULL
+      }
     } else {                                                          # If the user clicks on the selected HUC
       print(paste("removed:", event$id))
       leafletProxy("wqpMap") %>% removeShape(event$id)
       output$select <- reactive({F})
+      output$showCoverage <- reactive({F})
+      output$selectedHUCName <- renderText("Select a watershed...")
       print("select: F")
     }
   })
@@ -309,137 +410,145 @@ function(input, output, session) {
       )
     } else {
       print("Rendering second page")
+      
+      #selectDates tolower(input$restrict)
+      # jsSlider <- paste0("$(function() {
+      #                     setTimeout(function(){ 
+      #                     if (", "true",")
+      #                    {$('#selectDates').data('ionRangeSlider').update({'data-min-interval':7, 'data-max-interval':7})}
+      #                     else
+      #                     {$('#selectDates').data('ionRangeSlider').update({'data-min-interval':null, 'data-max-interval':null})}
+      #                    }, 5)}")
+      #"$('#selectDates').data('ionRangeSlider').update({'min_interval':7, 'max_interval':7})"
+      
       output$zoomedIn <- renderUI({
         fluidPage(
+          
           class = "details",
+          ## Header ---------
           fluidRow(
             column(10,
-                   tags$h1("Coverage in the ", strong(selectedHucBound$NAME), hucRegions[sprintf("%02s", str_length(hucSelected))])
+                   tags$h1("Coverage in the ", strong(selectedHucBound$NAME), hucRegions[str_pad(str_length(hucSelected), 2, pad = "0")])
                    ),
-            column(2, 
+            column(2,
                    actionButton("back", "Take me back!", 
-                                width = "100%", icon = icon("arrow-left"), style="width:100%, position:absolute; top:28px")
+                                width = "100%", icon = icon("arrow-left"), style="width:100%, position:absolute; margin-top:28px")
                    )
           ),
           fluidRow(
-            column(10,
+            column(8,
                    tags$h3(paste0("HUC", str_length(hucSelected), ": "),
                            strong(hucSelected), " — ", prettyNum(selectedHucBound$AREASQKM, big.mark=","),
                            "sq. km ", getRegionName(hucSelected))
             ),
-            column(2, 
-                    h3("Filters")
+            column(4,
+                   h3("Site Map")
             )
           ),
+          ## Coverage and Map ---------
           fluidRow(
-            column(5,
-              div(class="widget",
-                  leafletOutput(outputId = "hucDetail") %>% withSpinner(type=2, color.background="white")
-              )
-            ),
-            column(5,
-             div(class="widget",
-                plotlyOutput("coverage")
-             )
-            ),
-            column(2,
-              div(class = "widget",
-                h4(class="sidebarTitles", "Global Settings"),
-                selectizeInput("selectLocationType", "Filter by site location type:",
-                               choices=locationTypeNames, multiple=T, width = "100%", 
-                               options = list(
-                                 placeholder = 'Choose a site location type',
-                                 onInitialize = I('function() { this.setValue(""); }'))),
-                selectizeInput("selectStreamNames", "Filter by site location name:",
-                               choices=streamNames, multiple=T, width = "100%", 
-                               options = list(
-                                 placeholder = 'Choose a site location'
-                               )),
-                # dateRangeInput("selectDates", "Filter by date:", start = firstDate, end = lastDate, startview = "decade"),
-                sliderInput("selectDates", "Filter by date:", min = firstDate, max = lastDate, value = c(firstDate, lastDate)),
-                h4(class="sidebarTitles", "Measurement Site Map"),
-                checkboxInput("cluster", "Cluster", F),
-                splitLayout(checkboxInput("showHUC10", "HUC10s", F),
-                            checkboxInput("showHUC12", "HUC12s", F))
-              )
-            )
-          ),
-          fluidRow(
-            column(10,
-              div(class = "widget",
-                  tabsetPanel(type = "tabs", 
-                              tabPanel("Time Series", plotlyOutput("timeSeries")), 
-                              tabPanel("Histogram", plotlyOutput("histogram"))
-                              # tabPanel("Annual Trend")
-                  )
-              )
-            ),
-            column(2,
+            column(8,
                    div(class="widget",
-                      h4(class = "sidebarTitles", "Measurement Plots"),
-                      selectizeInput("timeSeriesLog", "Y-Axis: ", choices=c("Linear", "Log"), multiple = F, width = "100%"),
-                      downloadButton("dl", "Download filtered data", style="width:100%")
-                      # actionButton("plotUpdate", "Redraw plots!", icon=icon("sync"), width="100%")
-                      # selectizeInput("selectConstituent", "Filter by constituent:", 
-                      #                choices = c("Chlorophyll" = "chlorophyll", 
-                      #                            "Dissolved Organic Carbon (doc)" = "doc", 
-                      #                            "Turbidity (secchi)" = "secchi", 
-                      #                            "Total Suspended Solids (tss)" = "tss"),
-                      #                multiple=T, width="100%")
-                  )
+                       plotlyOutput("coverage")
+                   )
+            ),
+            column(4,
+                   div(class="widget",
+                       leafletOutput(outputId = "hucDetail")
+                   )
             )
-          )
+          ),
+          fluidRow(
+            column(8,
+                   div(class = "widget",
+                       h4(class = "sidebarTitles", "Measurement Site Selection"),
+                       splitLayout(cellWidths = c("60%", "40%"),
+                         sliderInput("selectDates", "Filter by date:", min = firstDate, max = lastDate, 
+                                     value = c(firstDate, lastDate), width = "90%"),
+                         sliderInput("selectCatchment", "Filter by upstream catchment area (sq. km):", min = lowCatchment, max = ceiling(highCatchment), 
+                                     value = c(lowCatchment, highCatchment), width = "100%")
+                       ),
+                       # sliderInput("selectDates", "Filter by date:", min = firstDate, max = lastDate, 
+                       #             value = c(firstDate, lastDate), width = "95%"),
+                       splitLayout(selectizeInput("selectLocationType", "Filter by site location type:",
+                                                  choices=locationTypeNames, multiple=T, width = "100%", 
+                                                  options = list(
+                                                    placeholder = 'Choose a site location type',
+                                                    onInitialize = I('function() { this.setValue(""); }'))),
+                                   selectInput(inputId = "constInput2",
+                                               label = "Filter by constituent:", width = "100%",
+                                               choices = getConstChoices(input$constInput),
+                                               multiple = F),
+                                   selectInput(inputId = "satFilter",
+                                               label = "Filter by satellite overpass (Landsat 5, 7, and 8):", width = "100%",
+                                               choices = c("All points" = "all", "Points that align with a satellite overpass" = "sat"),
+                                               multiple = F)
+                                   ),
+                       selectizeInput("selectStreamNames", "Filter by site location name:",
+                                      choices=streamNames, multiple=T, width = "100%", 
+                                      options = list(
+                                        placeholder = 'Choose a site location'
+                                      ))
+                       )
+            ),
+            column(4,
+                   div(class = "widget", style = "padding-bottom:5px",
+                       h4(class="sidebarTitles", "Settings"),
+                       splitLayout(checkboxInput("cluster", "Cluster site locations", F),
+                                   actionButton(style="margin-top: -5px;", "refresh", "Refresh map", icon = icon("refresh"), width = "100%")),
+                       splitLayout(style="margin-top: -10px;",
+                                   checkboxInput("showHUC10", "Show HUC10 Boundaries", F),
+                                   checkboxInput("showHUC12", "Show HUC12 Boundaries", F)),
+                       splitLayout(selectInput("covgAxis2", "Coverage Metric:", 
+                                               choices = c("Upstream Catchment Area" = "catchment", "Distance to Outlet" = "Pathlength")),
+                                   selectizeInput("covgLog2", "Y-Axis: ", choices=c("Linear", "Log"), multiple = F, width = "100%")
+                                   )
+                   ),
+                   div(class = "widget", style = "margin-top:-4px;",
+                       h4(class = "sidebarTitles", "Time Series"),
+                       actionButton("showTimeSeries", "Generate time series for selected points", width = "100%")
+                   )
+            )
+          ),
+          uiOutput("pageThree")
         )
       })
       
-      # Loading relevant wqp data and flowline data
-      wqp_path <- sprintf(
-        "Datasets/wqp_Constituents/wqp_%s_indexed.gpkg", input$constInput)
-      wqp_query <- sprintf(
-        "SELECT * FROM wqp_%s_indexed WHERE HUCEightDigitCode LIKE '%s%%'", input$constInput, hucSelected)
-      selected_wqp_data <- st_read(wqp_path, query=wqp_query)
-      
-      start <- Sys.time()
-      nhd_path <- "Datasets/NHDPlusNationalData/Flowlines/"
-      nhd_file_path <- paste0(nhd_path, "flowlines_simplified_", substr(hucSelected, 1, 2),".rds")
-      regionFlowlines <- readRDS(nhd_file_path)
-      if (hucLevel == 2) {
-        hucFlowlines <- regionFlowlines
-      } else {
-        hucFlowlines <- filter(regionFlowlines, startsWith(REACHCODE, as.character(hucSelected))) 
-      }
-      print(Sys.time() - start)
-      
-      # start <- Sys.time()
-      # nhd_path <- "Datasets/NHDPlusNationalData/Flowlines_HUC8"
-      # hucFlowlines <- list.files(nhd_path, pattern=paste0("^HUC8_", hucSelected), full.names = T) %>%
-      #   map(readRDS) %>%
-      #   do.call(rbind, .)
-      # print(Sys.time() - start)
-      # 
-      # start <- Sys.time()
-      # nhd_path <- "Datasets/NHDPlusNationalData/nhdplus_flowline.gpkg"
-      # nhd_query <- sprintf("SELECT * FROM nhdplus_flowline WHERE REACHCODE LIKE '%s%%'", hucSelected)
-      # hucFlowlines <- st_read(nhd_path, query = nhd_query)
-      # print(Sys.time() - start)
-      # 
-      coverageInfo <- select(hucFlowlines, COMID, TotDASqKM, Pathlength) %>% 
-        st_set_geometry(NULL)
-      selected_wqp_data_coverage <- left_join(selected_wqp_data, coverageInfo, by="COMID")
+      # Operations for filtering -------
       
       # Lists and dates for select inputs
-      locationTypeNames <- as.list(levels(pull(selected_wqp_data_coverage, ResolvedMonitoringLocationTypeName)))
-      streamNames <- as.list(levels(pull(selected_wqp_data_coverage, MonitoringLocationName)))
+      locationTypeNames <- as.list(unique(pull(selected_wqp_data_coverage, ResolvedMonitoringLocationTypeName)))
+      streamNames <- as.list(unique(pull(selected_wqp_data_coverage, MonitoringLocationName)))
+      
+      highCatchment <- max(pull(selected_wqp_data_coverage, TotDASqKM), na.rm = T)
+      #Prevents issue with filtering when no catchment info is available (Hawaii, Alaska, etc.)
+      lowCatchment <- ifelse(is.infinite(highCatchment), NA, 0)
+      highPathlength <- max(pull(selected_wqp_data_coverage, Pathlength), na.rm = T)
+      lowPathlength <- ifelse(is.infinite(highPathlength), NA, 0)
+      
       selectedDates <- as.Date(pull(selected_wqp_data_coverage, date_time))
       #Filter out unwanted dates
       firstDate <- max(c(min(selectedDates, na.rm = T), as.Date("1930-01-01"))) #Earliest date or 1930, whichever is later
       lastDate <- min(c(max(selectedDates, na.rm = T), as.Date("2019-04-23"))) #Latest date or 2019, whichever is earlier
       
       filtered_wqp_data_coverage <<- reactive({
+        print("updating")
         filtered <- selected_wqp_data_coverage
         if (!is.null(input$selectDates)) {
           filtered <- filter(selected_wqp_data_coverage,
                              as.Date(date_time) >= input$selectDates[1] & as.Date(date_time) <= input$selectDates[2])
+        }
+        if (!is.null(input$satFilter) && input$satFilter != "all") {
+          filtered <- filter(filtered, !is.na(landsat_id))
+        }
+        if (!is.null(input$selectCatchment)) {
+          if (input$covgAxis2 == "catchment") {
+            filtered <- filter(filtered,
+                               TotDASqKM >= input$selectCatchment[1] & TotDASqKM <= input$selectCatchment[2])
+          } else {
+            filtered <- filter(filtered,
+                               Pathlength >= input$selectCatchment[1] & Pathlength <= input$selectCatchment[2])
+          }
         }
         if (!is.null(input$selectLocationType)) {
           filtered <- filter(filtered, ResolvedMonitoringLocationTypeName %in% input$selectLocationType)
@@ -447,31 +556,58 @@ function(input, output, session) {
         if (!is.null(input$selectStreamNames)) {
           filtered <- filter(filtered, MonitoringLocationName %in% input$selectStreamNames)
         }
+        if (!is.null(input$constInput2) && input$constInput2 != "All") {
+          if (input$constInput2 == "chlorophyll") {
+            filtered <- filter(filtered, harmonized_parameter == "chl.a")
+          } else {
+            filtered <- filter(filtered, harmonized_parameter == input$constInput2)
+          }
+        }
         filtered
-      }) %>% debounce(1000)
+      }) %>% debounce(100)
       filtered_unique <<- reactive({
         filtered <- selected_wqp_data_coverage
         if (!is.null(input$selectDates)) {
           filtered <- filter(selected_wqp_data_coverage,
                              as.Date(date_time) >= input$selectDates[1] & as.Date(date_time) <= input$selectDates[2])
         }
+        if (!is.null(input$satFilter) && input$satFilter != "all") {
+          filtered <- filter(filtered, !is.na(landsat_id))
+        }
+        if (!is.null(input$selectCatchment)) {
+          if (input$covgAxis2 == "catchment") {
+            filtered <- filter(filtered,
+                               TotDASqKM >= input$selectCatchment[1] & TotDASqKM <= input$selectCatchment[2])
+          } else {
+            filtered <- filter(filtered,
+                               Pathlength >= input$selectCatchment[1] & Pathlength <= input$selectCatchment[2])
+          }
+        }
         if (!is.null(input$selectLocationType)) {
           filtered <- filter(filtered, ResolvedMonitoringLocationTypeName %in% input$selectLocationType)
         }
         if (!is.null(input$selectStreamNames)) {
           filtered <- filter(filtered, MonitoringLocationName %in% input$selectStreamNames)
         }
+        if (!is.null(input$constInput2) && input$constInput2 != "All") {
+          if (input$constInput2 == "chlorophyll") {
+            filtered <- filter(filtered, harmonized_parameter == "chl.a")
+          } else {
+            filtered <- filter(filtered, harmonized_parameter == input$constInput2)
+          }
+        }
         getUniquePoints(filtered)
-      }) %>% debounce(1000)
+      }) %>% debounce(100)
 
       # key <- highlight_key(filtered_wqp_data_coverage, group = "coverage")
-      map_key <<- SharedData$new(filtered_unique, group = "coverage", key=~SiteID)
-      key <<- SharedData$new(filtered_wqp_data_coverage, group = "coverage", key=~SiteID)
+      # map_key <<- SharedData$new(filtered_unique, group = "coverage", key=~SiteID)
+      # key <<- SharedData$new(filtered_wqp_data_coverage, group = "coverage", key=~SiteID)
 
       # Secondary detail map with markers for site locations
       output$hucDetail <- renderLeaflet({
+        print("Map being drawn")
         # Bounds fit continental US
-        hucDetailMap <- leaflet(map_key) %>% 
+        hucDetailMap <- leaflet() %>% 
           addProviderTiles(providers$Esri.WorldTopoMap, group = "Esri.WorldTopoMap", 
                            options = providerTileOptions(updateWhenZooming=F, updateWhenIdle = T)) %>%
           addProviderTiles(providers$Esri.OceanBasemap, group = "Esri.OceanBasemap",
@@ -494,23 +630,15 @@ function(input, output, session) {
                       #label = hucSelected,
                       color = "black",
                       fillOpacity = 0.1,
-                      weight = 3) %>% 
-          addCircleMarkers(radius = 3,
-                           stroke = F,
-                           color = "red",
-                           options = pathOptions(pane = "points"),
-                           # opacity = 0.8,
-                           # fillOpacity = 0.2,
-                           opacity = 1,
-                           fillOpacity = 1,
-                           group = "markers")
-                           #label = ~MonitoringLocationName)
+                      weight = 3)
+          
       })
 
-      # leafletProxy("hucDetail", data=map_key) %>%
+      # hucDetailPal <- colorNumeric("YlOrRd", range(pull(filtered_unique(), resultCount)))
+      # leafletProxy("hucDetail", data=filtered_unique()) %>%
       #   addCircleMarkers(radius = 3,
       #                    stroke = F,
-      #                    color = "red",
+      #                    color = ~hucDetailPal(resultCount),
       #                    # opacity = 0.8,
       #                    # fillOpacity = 0.2,
       #                    opacity = 1,
@@ -542,38 +670,44 @@ function(input, output, session) {
       # })
       
       output$coverage <- renderPlotly({
-        covg <- plot_ly(key, x=~date, y=~TotDASqKM, text=~MonitoringLocationName) %>% 
-          add_markers(color=~harmonized_parameter) %>%
-          layout(xaxis=list(title = "Date"), yaxis=list(title="Upstream Catchment Area", type = "log")) %>% 
-          highlight("plotly_selected", off = "plotly_deselect") %>%
-          event_register("plotly_relayout") %>%
-          # rangeslider() #%>% 
-          toWebGL()
-      })
-      
-      output$timeSeries <- renderPlotly({
-        # siteValsPlot <- ggplot(key) + 
-        #   geom_point(mapping = aes(x=date_time, y=harmonized_value, color=harmonized_parameter)) + 
-        #   labs(x="Date")#,y="Chlorophyll - ug/L")
-        # ggplotly(siteValsPlot, dynamicTicks = TRUE) %>% toWebGL()
-        if(input$timeSeriesLog == "Log") {
-          timeSeries <- plot_ly(key, x=~date, y=~harmonized_value) %>% 
-            add_markers(color=~factor(harmonized_parameter)) %>%
-            layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit", type="log"), showlegend = T) %>% 
-            highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T))
+        if (input$covgAxis2 == "catchment") {
+          if (input$covgLog2 == "Linear") {
+            covg <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~TotDASqKM, text=~MonitoringLocationName, source = "selection", customdata = ~SiteID, key = ~as.character(date)) %>% 
+              add_markers(color=~harmonized_parameter) %>%
+              layout(xaxis=list(title = "Date"), yaxis=list(title="Upstream Catchment Area (sq. km)"), showlegend = T) %>% 
+              highlight("plotly_selected", off = "plotly_deselect") %>%
+              # rangeslider() #%>% 
+              toWebGL()
+          } else {
+            covg <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~TotDASqKM, text=~MonitoringLocationName, source = "selection", customdata = ~SiteID, key = ~as.character(date)) %>% 
+              add_markers(color=~harmonized_parameter) %>%
+              layout(xaxis=list(title = "Date"), yaxis=list(title="Upstream Catchment Area (sq. km)", type = "log"), showlegend = T) %>% 
+              highlight("plotly_selected", off = "plotly_deselect") %>%
+              toWebGL()
+          }
         } else {
-          timeSeries <- plot_ly(key, x=~date, y=~harmonized_value) %>% 
-            add_markers(color=~factor(harmonized_parameter)) %>%
-            layout(xaxis=list(title="Date"), yaxis=list(title="Harmonized Unit"), showlegend = T) %>% 
-            highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T))
+          if (input$covgLog2 == "Linear") {
+            covg <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~Pathlength, text=~MonitoringLocationName, source = "selection", customdata = ~SiteID, key = ~as.character(date)) %>% 
+              add_markers(color=~harmonized_parameter) %>%
+              layout(xaxis=list(title = "Date"), yaxis=list(title="Distance to Outlet (km)"), showlegend = T) %>% 
+              highlight("plotly_selected", off = "plotly_deselect") %>%
+              toWebGL()
+          } else {
+            covg <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~Pathlength, text=~MonitoringLocationName, source = "selection", customdata = ~SiteID, key = ~as.character(date)) %>% 
+              add_markers(color=~harmonized_parameter) %>%
+              layout(xaxis=list(title = "Date"), yaxis=list(title="Distance to Outlet (km)", type = "log"), showlegend = T) %>% 
+              highlight("plotly_selected", off = "plotly_deselect") %>%
+              toWebGL()
+          }
         }
+        covg
       })
-      
-      output$histogram <- renderPlotly({
-        histogram <- plot_ly(key, x=~harmonized_value) %>% 
-          add_histogram(color=~harmonized_parameter, xbins = list(start = 0, size = 10)) %>% 
-          layout(xaxis=list(title="Measurement Value"), yaxis=list(title="Measurement Count"), showlegend = T)
-      })
+
+      # output$histogram <- renderPlotly({
+      #   histogram <- plot_ly(key, x=~harmonized_value) %>% 
+      #     add_histogram(color=~harmonized_parameter, xbins = list(start = 0, size = 10)) %>% 
+      #     layout(xaxis=list(title="Measurement Value"), yaxis=list(title="Measurement Count"), showlegend = T)
+      # })
       
       output$dl <- downloadHandler(
         filename = function() {
@@ -585,23 +719,36 @@ function(input, output, session) {
           write.csv(data, file, row.names = F)
         }
       )
+      
+      #sliderInput("selectCatchment", "Filter by upstream catchment area (sq. km):", min = lowCatchment, max = ceiling(highCatchment), 
+      #            value = c(lowCatchment, highCatchment), width = "100%")
+      
+      observeEvent(input$covgAxis2, {
+        if(!is.null(input$covgAxis2)) {
+          if (input$covgAxis2 == "catchment") {
+            updateSliderInput(session, "selectCatchment", "Filter by upstream catchment area (sq. km):", 
+                              min = lowCatchment, max = ceiling(highCatchment), value = c(lowCatchment, highCatchment))
+          } else {
+            updateSliderInput(session, "selectCatchment", "Filter by distance to outlet (km):", 
+                              min = lowPathlength, max = ceiling(highPathlength), value = c(lowPathlength, highPathlength))
+          }
+        }
+      })
     }
   })
   
   # Drawing of points based on selection options
-  observeEvent(c(input$cluster, input$selectLocationType, input$selectDates, input$selectStreamNames), {
-    
+  observeEvent(c(input$refresh, input$cluster, input$selectLocationType, input$satFilter,
+                 input$selectDates, input$selectCatchment, input$selectStreamNames, input$constInput2), {
+                   
+    js$selectionReset()
+                   
     #Fix for crosstalk / leaflet issue when filter selects zero points
+    markers <- leafletProxy("hucDetail", data = filtered_unique())
+    clearGroup(markers, group="markers")
     req(nrow(filtered_unique()) != 0)
     
-    # Fix for crosstalk / leaflet attempts to filter after a plot-based selection was made
-    # Doesn't actually work
-    key$clearSelection()
-    map_key$clearSelection("hucDetail")
-    
     if(!is.null(input$cluster) && input$cluster) {
-      markers <- leafletProxy("hucDetail", data = map_key)
-      clearGroup(markers, group="markers")
       markers %>%
         addCircleMarkers(
           stroke = F,
@@ -612,18 +759,21 @@ function(input, output, session) {
           group = "markers",
           label = ~MonitoringLocationName)
     } else {
-      markers <- leafletProxy("hucDetail", data = map_key)
-      clearGroup(markers, group="markers")
+      # hucDetailPal <- colorNumeric("YlOrRd", range(pull(filtered_unique(), resultCount)))
+      # hucDetailPal <- colorQuantile("YlOrRd", range(pull(filtered_unique(), resultCount)), n = 5)
+      hucDetailPal <- colorBin("YlOrRd", range(pull(filtered_unique(), resultCount)), 
+                               bins = c(0, 5, 10, 20, 50, 100, 500, 1000, 5000, 10000, Inf))
       markers %>% addCircleMarkers(radius = 3,
                                    stroke = F,
-                                   color = "red",
+                                   color = ~hucDetailPal(resultCount),
                                    options = pathOptions(pane = "points"),
                                    # opacity = 0.8,
                                    # fillOpacity = 0.2,
                                    opacity = 1,
                                    fillOpacity = 1,
                                    group = "markers",
-                                   label = ~MonitoringLocationName)
+                                   label = ~MonitoringLocationName) #%>% 
+      # addLegend(position = "bottomright", pal = hucDetailPal, values = ~resultCount, title = "Measurement Counts")
     }
   })
   
@@ -649,17 +799,81 @@ function(input, output, session) {
     }
   })
   
+  # Page 3 - Time Series -----------
+  observeEvent(input$showTimeSeries, {
+    output$pageThree <- renderUI({
+      fluidPage(
+        class = "details",
+        fluidRow(
+          column(10, h1("Time Series")),
+          column(2, actionButton("back2", "Take me back!", 
+                                 width = "100%", icon = icon("arrow-left"), style="width:100%, position:absolute; margin-top:28px"))
+        ),
+        fluidRow(
+          column(10, div(class = "widget", plotlyOutput("timeSeries"))),
+          column(2, div(class = "widget", 
+                        selectizeInput("timeSeriesLog", "Y-Axis: ", choices=c("Linear", "Log"), multiple = F, width = "100%"), 
+                        downloadButton("dl", "Download filtered data", style="width:100%")))
+        )
+      )
+    })
+    
+    output$timeSeries <- renderPlotly({
+      selectionEvent <- event_data("plotly_selected", source = "selection") #%>% select(x, customdata)
+      if (is.null(selectionEvent)) {
+        if(input$timeSeriesLog == "Log") {
+          timeSeries <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
+            add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
+            layout(xaxis=list(title="Date"), yaxis=list(title="Value", type="log"), showlegend = T) %>%
+            highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T))
+        } else {
+          timeSeries <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
+            add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
+            layout(xaxis=list(title="Date"), yaxis=list(title="Value"), showlegend = T) %>%
+            highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T))
+        }
+      } else {
+        selected_data <- filtered_wqp_data_coverage() %>%
+          mutate(dateChar = as.character(date)) %>%
+          semi_join(selectionEvent, by = c("SiteID" = "customdata", "dateChar" = "key"))
+        
+        if(input$timeSeriesLog == "Log") {
+          timeSeries <- plot_ly(selected_data, x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
+            add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
+            layout(xaxis=list(title="Date"), yaxis=list(title="Value", type="log"), showlegend = T) %>%
+            highlight("plotly_selected", off = "plotly_deselect")
+        } else {
+          timeSeries <- plot_ly(selected_data, x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
+            add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
+            layout(xaxis=list(title="Date"), yaxis=list(title="Value"), showlegend = T) %>%
+            highlight("plotly_selected", off = "plotly_deselect")
+        }
+      }
+    })
+  })
+  
   # Back button
   observeEvent(input$back, {
     leafletProxy("hucDetail") %>% clearGroup(group="markers")
     filtered_wqp_data_coverage <<- NULL
     filtered_unique <<- NULL
-    key <<- NULL
-    map_key <<- NULL
-    output$timeSeries <- NULL
+    # key <<- NULL
+    # map_key <<- NULL
+    
+    # output$coverage1 <- NULL
+    # output$selectedHUCName <- renderText("Select a watershed...")
+    
     output$hucDetail <- NULL
+    
+    js$selectionReset()
     output$coverage <- NULL
+    
     output$zoomedIn <- NULL
     # selectedHucBound <<- NULL
+  })
+  
+  observeEvent(input$back2, {
+    output$timeSeries <- NULL
+    output$pageThree <- NULL
   })
 }

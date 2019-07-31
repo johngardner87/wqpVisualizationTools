@@ -5,8 +5,8 @@ library(shiny)
 library(plotly)
 library(leaflet)
 library(sf)
-library(rmapshaper)
 library(shinyalert)
+library(shinyjs)
 
 # UI Layout ---------------------------------------------------------------
 
@@ -14,11 +14,15 @@ fluidPage(
   
   class="hucMap",
   useShinyalert(),
+  
+  useShinyjs(),
+  extendShinyjs(text = "shinyjs.selectionReset = function() { Shiny.setInputValue('plotly_selected-selection', 'null'); }"),
+  
   tags$head(
     includeCSS("styles.css")
   ),
   
-  # Inspired from https://github.com/akl21/hbef
+  # Inspired by https://github.com/akl21/hbef
   # This is here and not the the css file because for some reason the default
   # styles for the range sliders overwrite the custom style sheet, not sure why
   tags$style(type = "text/css", "
@@ -32,32 +36,45 @@ fluidPage(
   
   # Map Output
   leafletOutput(outputId = "wqpMap", height = "100%", width="100%"),
-  # leafletOutput(outputId = "wqpMap", height = "400px", width="800px"),
   
-  absolutePanel(id = "inputs", fixed = T, draggable = TRUE, top = 450, left = "auto", right = 40, bottom = "auto",
-                width = 200, height = "auto",
+  # For whatever reason displaying output.select in this way fixes major bug 
+  # when displaying pop-up coverage plot for second time
+  # absolutePanel(h4(textOutput("select"))),
+    
+  absolutePanel(id = "inputs", class = "inputs", fixed = T, draggable = TRUE, top = 75, left = "auto", right = 10, 
+                bottom = "auto", width = 400, height = "auto",
                 
-                h2("Water Quality Portal"),
+                h2("pondr"),
                 
-                selectInput(inputId = "hucInput",
-                            label = "HUC Level",
-                            # choices = c(2, 4, 6, 8, 10, 12)),
-                            choices = c(2, 4, 6, 8)),
+                splitLayout(cellWidths = c("25%", "75%"),
+                  selectInput(inputId = "hucInput",
+                              label = "HUC Level",
+                              # choices = c(2, 4, 6, 8, 10, 12)),
+                              choices = c(2, 4, 6, 8),
+                              selected = 4),
+                  
+                  selectInput(inputId = "constInput",
+                              label = "Constituent",
+                              choices = c("All", 
+                                          "Chlorophyll" = "chlorophyll", 
+                                          "Dissolved Organic Carbon (doc)" = "doc", 
+                                          "Turbidity (secchi)" = "secchi", 
+                                          "Total Suspended Solids (tss)" = "tss"),
+                              multiple = F,
+                              selected = "All")
+                ),
                 
-                selectInput(inputId = "constInput",
-                            label = "Constituent",
-                            choices = c("All", 
-                                        "Chlorophyll" = "chlorophyll", 
-                                        "Dissolved Organic Carbon (doc)" = "doc", 
-                                        "Turbidity (secchi)" = "secchi", 
-                                        "Total Suspended Solids (tss)" = "tss"),
-                            multiple = F,
-                            selected = "All"),
-                
+                div(class = "coveragePlot",
+                    h4(textOutput("selectedHUCName")),
+                    conditionalPanel(condition = "output.showCoverage", style = "margin-bottom: 10px;",
+                                     plotOutput("coverage1", width = "auto"),
+                                     selectInput("covgAxis", "Coverage Metric:", width = "auto",
+                                                 choices = c("Upstream Catchment Area" = "catchment", "Distance to Outlet" = "Pathlength"))
+                    )
+                ),
                 conditionalPanel(condition = "output.select",
-                                actionButton("zoom", "Show me more!")
+                                 actionButton("zoom", "Show me more!", style = "margin-top:20px", width = "100%")
                 )
   ),
-  
   uiOutput("zoomedIn")
 )
