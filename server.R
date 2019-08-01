@@ -567,8 +567,16 @@ function(input, output, session) {
       }) %>% debounce(100)
       filtered_unique <<- reactive({
         filtered <- selected_wqp_data_coverage
+        
+        selectionEvent <- event_data("plotly_selected", source = "selection")
+        if (!is.null(selectionEvent)) {
+          filtered <- filtered %>%
+            mutate(dateChar = as.character(date)) %>%
+            semi_join(selectionEvent, by = c("SiteID" = "customdata", "dateChar" = "key"))
+        }
+        
         if (!is.null(input$selectDates)) {
-          filtered <- filter(selected_wqp_data_coverage,
+          filtered <- filter(filtered,
                              as.Date(date_time) >= input$selectDates[1] & as.Date(date_time) <= input$selectDates[2])
         }
         if (!is.null(input$satFilter) && input$satFilter != "all") {
@@ -738,11 +746,46 @@ function(input, output, session) {
   })
   
   # Drawing of points based on selection options
-  observeEvent(c(input$refresh, input$cluster, input$selectLocationType, input$satFilter,
+  observeEvent(c(input$refresh, input$cluster), {
+    #Fix for crosstalk / leaflet issue when filter selects zero points
+    markers <- leafletProxy("hucDetail", data = filtered_unique())
+    clearGroup(markers, group="markers")
+    req(nrow(filtered_unique()) != 0)
+    
+    if(!is.null(input$cluster) && input$cluster) {
+      markers %>%
+        addCircleMarkers(
+          stroke = F,
+          # color = "black",
+          clusterOptions = markerClusterOptions(),
+          options = pathOptions(pane = "points"),
+          # layerId = ~SiteID,
+          group = "markers",
+          label = ~MonitoringLocationName)
+    } else {
+      # hucDetailPal <- colorNumeric("YlOrRd", range(pull(filtered_unique(), resultCount)))
+      # hucDetailPal <- colorQuantile("YlOrRd", range(pull(filtered_unique(), resultCount)), n = 5)
+      hucDetailPal <- colorBin("YlOrRd", range(pull(filtered_unique(), resultCount)), 
+                               bins = c(0, 5, 10, 20, 50, 100, 500, 1000, 5000, 10000, Inf))
+      markers %>% addCircleMarkers(radius = 3,
+                                   stroke = F,
+                                   color = ~hucDetailPal(resultCount),
+                                   options = pathOptions(pane = "points"),
+                                   # opacity = 0.8,
+                                   # fillOpacity = 0.2,
+                                   opacity = 1,
+                                   fillOpacity = 1,
+                                   group = "markers",
+                                   label = ~MonitoringLocationName) #%>% 
+      # addLegend(position = "bottomright", pal = hucDetailPal, values = ~resultCount, title = "Measurement Counts")
+    }
+  })
+  
+  observeEvent(c(input$selectLocationType, input$satFilter,
                  input$selectDates, input$selectCatchment, input$selectStreamNames, input$constInput2), {
-                   
+    
     js$selectionReset()
-                   
+                  
     #Fix for crosstalk / leaflet issue when filter selects zero points
     markers <- leafletProxy("hucDetail", data = filtered_unique())
     clearGroup(markers, group="markers")
@@ -821,32 +864,41 @@ function(input, output, session) {
     output$timeSeries <- renderPlotly({
       selectionEvent <- event_data("plotly_selected", source = "selection") #%>% select(x, customdata)
       if (is.null(selectionEvent)) {
-        if(input$timeSeriesLog == "Log") {
+        if (nrow(unique(select(filtered_wqp_data_coverage(), MonitoringLocationName))) <= 5) {
           timeSeries <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
-            add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
-            layout(xaxis=list(title="Date"), yaxis=list(title="Value", type="log"), showlegend = T) %>%
-            highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T))
+            add_markers(color=~MonitoringLocationName,
+                        symbol = ~harmonized_parameter,
+                        name = ~paste0(MonitoringLocationName, " - ", harmonized_parameter, " (", harmonized_unit, ")")) %>%
+            layout(xaxis=list(title="Date"), yaxis=list(title="Value", 
+                                                        type=ifelse(input$timeSeriesLog == "Log", "log", "")), showlegend = T) %>%
+            highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T)) 
         } else {
           timeSeries <- plot_ly(filtered_wqp_data_coverage(), x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
-            add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
-            layout(xaxis=list(title="Date"), yaxis=list(title="Value"), showlegend = T) %>%
-            highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T))
+            add_markers(color=~harmonized_parameter, name = ~paste0(harmonized_parameter, " (", harmonized_unit, ")")) %>%
+            layout(xaxis=list(title="Date"), yaxis=list(title="Value", 
+                                                        type=ifelse(input$timeSeriesLog == "Log", "log", "")), showlegend = T) %>%
+            highlight("plotly_selected", off = "plotly_deselect")
         }
       } else {
         selected_data <- filtered_wqp_data_coverage() %>%
           mutate(dateChar = as.character(date)) %>%
           semi_join(selectionEvent, by = c("SiteID" = "customdata", "dateChar" = "key"))
         
-        if(input$timeSeriesLog == "Log") {
+        
+        if (nrow(unique(select(filtered_wqp_data_coverage(), MonitoringLocationName))) <= 5) {
           timeSeries <- plot_ly(selected_data, x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
-            add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
-            layout(xaxis=list(title="Date"), yaxis=list(title="Value", type="log"), showlegend = T) %>%
-            highlight("plotly_selected", off = "plotly_deselect")
+            add_markers(color=~MonitoringLocationName,
+                        symbol = ~harmonized_parameter,
+                        name = ~paste0(MonitoringLocationName, " - ", harmonized_parameter, " (", harmonized_unit, ")")) %>%
+            layout(xaxis=list(title="Date"), yaxis=list(title="Value", 
+                                                        type=ifelse(input$timeSeriesLog == "Log", "log", "")), showlegend = T) %>%
+            highlight("plotly_selected", off = "plotly_deselect", selected=attrs_selected(showlegend=T)) 
         } else {
           timeSeries <- plot_ly(selected_data, x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
-            add_markers(color=~factor(harmonized_parameter), name = ~paste0(harmonized_parameter, ", (", harmonized_unit, ")")) %>%
-            layout(xaxis=list(title="Date"), yaxis=list(title="Value"), showlegend = T) %>%
-            highlight("plotly_selected", off = "plotly_deselect")
+            add_markers(color=~harmonized_parameter, name = ~paste0(harmonized_parameter, " (", harmonized_unit, ")")) %>%
+            layout(xaxis=list(title="Date"), yaxis=list(title="Value", 
+                                                        type=ifelse(input$timeSeriesLog == "Log", "log", "")), showlegend = T) %>%
+            highlight("plotly_selected", off = "plotly_deselect") 
         }
       }
     })
