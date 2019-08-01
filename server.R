@@ -885,7 +885,7 @@ function(input, output, session) {
           semi_join(selectionEvent, by = c("SiteID" = "customdata", "dateChar" = "key"))
         
         
-        if (nrow(unique(select(filtered_wqp_data_coverage(), MonitoringLocationName))) <= 5) {
+        if (nrow(unique(select(selected_data, MonitoringLocationName))) <= 5) {
           timeSeries <- plot_ly(selected_data, x=~date, y=~harmonized_value, text=~MonitoringLocationName) %>%
             add_markers(color=~MonitoringLocationName,
                         symbol = ~harmonized_parameter,
