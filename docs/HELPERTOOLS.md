@@ -22,12 +22,14 @@ install.packages("tidyverse", "feather", "sf", "rmapshaper", "dbplyr", "devtools
 devtools::install_github("USGS-R/nhdplusTools")
 ```
 - Simplify WBD shapefiles
-  - Run `simplifyHUCBoundary.R` and save resulting files in `Datasets` directory in folder called `WBD_Simplified`
+  - Run `simplifyHUCBoundary.R`
 - Process WQP Data
-  - Run `wqpJoin.R` and save resulting files in folder called `wqp_Constituents`
-  - Run `wqpIndexing.R` and save resulting files in `wqp_Constituents`
-  - Run `countMeasurements.R` and save resulting files in `WBD_Simplified`
-  - Run `saveWQPSQLite.R` and save resulting files in `wqp_Constituents`
+  - Run `wqpJoin.R`
+  - Run `wqpIndexing.R`
+    - Functions `wqpIndexing` and `wqpCombining` must both be called, but can be run sequentially one at a time if memory issues arise.
+    - This process assigns flowline COMIDs to all individual measurements and takes a long time (on the order of a few hours).
+  - Run `countMeasurements.R`
+  - Run `saveWQPSQLite.R`
 - Clean intermediary data
   - The following directories/files should remain in the `Datasets` directory:
     - `/WBD_Simplified/WBDHUxCounts.gpkg` for HUCs 2-8

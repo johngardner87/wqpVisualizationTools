@@ -49,6 +49,6 @@ Start <- Sys.time()
 wqpIndexing(directory, const)
 Sys.time() - Start
 
-# Start <- Sys.time()
-# wqpCombining(directory, const)
-# Sys.time() - Start
+Start <- Sys.time()
+wqpCombining(directory, const)
+Sys.time() - Start

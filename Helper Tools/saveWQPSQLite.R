@@ -6,15 +6,13 @@ library(dbplyr)
 #'
 #' Reads in saved files from wqpIndexing script and stores as CSVs and SQLite format
 #' 
-#' @param dir String, path of directory with datasets
 #' @param constituents String vector, names of constituent files
 
-saveCSVs <- function(dir, constituents) {
+saveCSVs <- function(constituents) {
   
-  #Comment this out and set working directory manually if it throws an error
-  setwd(dir)
-  
-  dir.create("Datasets/wqp_Constituents/CSVs")
+  if(!dir.exists("Datasets/wqp_Constituents/CSVs")) {
+    dir.create("Datasets/wqp_Constituents/CSVs")
+  }
   for (i in constituents) {
    path <- paste0("Datasets/wqp_Constituents/wqp_", i, "_indexed.gpkg")
    data <- st_read(path)
@@ -25,10 +23,7 @@ saveCSVs <- function(dir, constituents) {
   
 }
 
-saveWQPSQLite <- function(dir) {
-  
-  #Comment this out and set working directory manually if it throws an error
-  setwd(dir)
+saveWQPSQLite <- function() {
   
   flowlines <- readRDS("Datasets/NHDPlusNationalData/nhdplus_flowline.rds")
   coverageInfo <- select(flowlines, COMID, TotDASqKM, Pathlength) %>%
@@ -72,7 +67,8 @@ saveWQPSQLite <- function(dir) {
 }
 
 dir <- ""
-constituents <- c("doc", "chlorophyll", "tss", "All", "secchi")
+setwd(dir)
 
-saveCSVs(dir, constituents)
+constituents <- c("doc", "chlorophyll", "tss", "All", "secchi")
+saveCSVs(constituents)
 saveWQPSQLite(dir)

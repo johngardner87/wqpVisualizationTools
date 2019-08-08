@@ -8,14 +8,10 @@ library(sf)           # For geographical information data (shapes, boundaries, f
 #' Filters measurement values and site location information by constituents, joins, and saves files
 #' Stores joined data as longitude/latitude columns or shape files, saves as .csv or .gpkg respectively
 #'
-#' @param dir String, path of directory with datasets
 #' @param constituent String vector, constituent types to filter by, currently accepts "chlorophyll", "doc",                                       "secchi", "tss"
 #' @param shape Boolean, saves sf files when TRUE, defaults to FALSE
 #'
-wqpJoin <- function(dir, constituents, shape = FALSE) {
-  
-  #Comment this out and set working directory manually if it throws an error
-  setwd(dir)
+wqpJoin <- function(constituents, shape = FALSE) {
   
   # Measurements
   wqp_measurements <- read_csv("Datasets/wqp_long_with_methods.csv")
@@ -46,15 +42,19 @@ wqpJoin <- function(dir, constituents, shape = FALSE) {
   if (shape) {
     # Make geometry out of latitude, longitude points
     measByLocGeoms <- st_as_sf(measByLocations, coords = c("LongitudeMeasure", "LatitudeMeasure"), crs=4269)
-    st_write(measByLocGeoms, paste(fileName, ".gpkg", sep=""))
+    st_write(measByLocGeoms, paste("Datasets/wqp_Constituents/", fileName, ".gpkg", sep=""))
   } else {
-    write_csv(measByLocations, paste(fileName, ".csv", sep=""))
+    write_csv(measByLocations, paste("Datasets/wqp_Constituents/", fileName, ".csv", sep=""))
   }
   
 }
 
 directory = ""
-wqpJoin(directory, "chlorophyll", T)
-wqpJoin(directory, "tss", T)
-wqpJoin(directory, "doc", T)
-wqpJoin(directory, "secchi", T)
+setwd(directory)
+if (!dir.exists("Datasets/wqp_Constituents")) {
+  dir.create("wqp_Constituents")
+}
+wqpJoin("chlorophyll", T)
+wqpJoin("tss", T)
+wqpJoin("doc", T)
+wqpJoin("secchi", T)

@@ -26,11 +26,14 @@ simplifyHUCBoundary <- function(wbd_path, level) {
     }
     
     # st_write can't write .gdb files
-    st_write(simplifiedBounds, paste(layerName, ".gpkg", sep = ""), delete_layer = TRUE)
+    st_write(simplifiedBounds, paste("Datasets/WBD_Simplified/", layerName, ".gpkg", sep = ""), delete_layer = TRUE)
 }
 
 setwd("")
 
+if (!dir.exists("Datasets/WBD_Simplified")) {
+  dir.create("Datasets/WBD_Simplified")
+}
 wbd_path <- "Datasets/WBD_National_GDB/WBD_National_GDB.gdb/"
 
 for (i in seq(2, 12, 2)) {

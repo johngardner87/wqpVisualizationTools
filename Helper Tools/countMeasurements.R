@@ -5,12 +5,9 @@ library(sf)
 #'
 #' Adds column of measurements count for each HUC boundary by constituent
 #'
-#' @param dir String, sets directory path
 #' @param constituents String, subsection of measurements to be measured
 #' 
-countMeasurements <- function(dir) {
-  setwd(dir)
-  constituents <- c("chlorophyll", "tss", "doc", "secchi")
+countMeasurements <- function(constituents) {
   for (i in seq(2, 8, 2)) {
     bounds <- st_read(paste0("Datasets/WBD_Simplified/WBDHU", i, ".gpkg"))
     for (const in constituents) {
@@ -34,11 +31,14 @@ countMeasurements <- function(dir) {
     cols <- c("chlorophyllMeasCount", "docMeasCount", "secchiMeasCount", "tssMeasCount")
     allCounts <- bounds[cols] %>% st_set_geometry(NULL) %>% reduce(`+`)
     bounds <- mutate(bounds, AllMeasCount = allCounts)
-    st_write(bounds, paste("WBDHU", i, "Counts.gpkg", sep=""), delete_layer=T)
+    st_write(bounds, paste("Datasets/WBD_Simplified/WBDHU", i, "Counts.gpkg", sep=""), delete_layer=T)
   }
 }
 
 directory = ""
+setwd(directory)
+constituents <- c("chlorophyll", "tss", "doc", "secchi")
+
 start <- Sys.time()
-countMeasurements(directory)
+countMeasurements(constituents)
 print(Sys.time() - start)
