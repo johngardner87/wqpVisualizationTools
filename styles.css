@@ -26,6 +26,15 @@ h2 {
   border-radius: 20px;
 }
 
+.acknowledgements {
+  color: white;
+  /*background-color: #001A57;*/
+  background-color: #012169;
+  padding: 20px 20px 20px 20px;
+  opacity: 0.85;
+  border-radius: 20px;
+}
+
 .coveragePlot {
   /*color: white;
   background-color: #012169;

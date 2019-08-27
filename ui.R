@@ -41,12 +41,22 @@ fluidPage(
   
   # For whatever reason displaying output.select in this way fixes major bug 
   # when displaying pop-up coverage plot for second time
+
+  #NEB adds an acknowledgement panel
   # absolutePanel(h4(textOutput("select"))),
+  absolutePanel(id = "acknowledgements", class = "acknowledgements", fixed = T, draggable = TRUE, top = 500, left = "auto", right = 10, 
+                bottom = "auto", width = 400, height = "auto",
+                p(strong("Developers:")," Yaov Kargon (yoav.kargon@duke.edu), Tommy Lin (kailai.lin@duke.edu)"),
+                p(strong("Domain and project guidance:")," Nick Bruns (neb8@duke.edu), John Gardner (johngardner87@gmail.com), Jim Heffernan (james.heffernan@duke.edu)"),
+                p(strong("Data Courtesy of Aquasast:")," Matt Ross (mrvr@rams.colostate.edu), Alison Appling (aappling@usgs.gov), Simon Topp (sntopp@live.unc.edu), Xiao Yang (yangxiao@live.unc.edu), Tamlin Pavelsky (pavelsky@unc.edu). Ross et al 2019. Aquasat. WRR."),
+                p(strong("Funding:"), a("Duke Data+ program" , href= 'https://bigdata.duke.edu/data')),
+                p(strong("Additional Support:")," Blake Schaefer (Schaeffer.Blake@epa.gov), Jordan Read (jread@usgs.gov)") 
+               ) ,
     
   absolutePanel(id = "inputs", class = "inputs", fixed = T, draggable = TRUE, top = 75, left = "auto", right = 10, 
                 bottom = "auto", width = 400, height = "auto",
                 
-                h2("pondr"),
+                h2("WQP Explorer"),
                 
                 splitLayout(cellWidths = c("25%", "75%"),
                   selectInput(inputId = "hucInput",
