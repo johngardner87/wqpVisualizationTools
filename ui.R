@@ -48,15 +48,18 @@ fluidPage(
                 bottom = "auto", width = 400, height = "auto",
                 p(strong("Developers:")," Yaov Kargon (yoav.kargon@duke.edu), Tommy Lin (kailai.lin@duke.edu)"),
                 p(strong("Domain and project guidance:")," Nick Bruns (neb8@duke.edu), John Gardner (johngardner87@gmail.com), Jim Heffernan (james.heffernan@duke.edu)"),
-                p(strong("Data Courtesy of Aquasast:")," Matt Ross (mrvr@rams.colostate.edu), Alison Appling (aappling@usgs.gov), Simon Topp (sntopp@live.unc.edu), Xiao Yang (yangxiao@live.unc.edu), Tamlin Pavelsky (pavelsky@unc.edu). Ross et al 2019. Aquasat. WRR."),
+                p(strong("Data Courtesy of Acquasat: "),a("Ross et. al. 2009",href='https://doi.org/10.1029/2019WR024883')),
                 p(strong("Funding:"), a("Duke Data+ program" , href= 'https://bigdata.duke.edu/data')),
-                p(strong("Additional Support:")," Blake Schaefer (Schaeffer.Blake@epa.gov), Jordan Read (jread@usgs.gov)") 
+                p(strong("Additional Support:")," Blake Schaefer (Schaeffer.Blake@epa.gov), Jordan Read (jread@usgs.gov)"),
+                tags$br(), 
+                p(strong("**** warning ***"), tags$br()," this app remains in alpha stages. Multiple simultaenous users may impact its functionality.")
+
                ) ,
     
   absolutePanel(id = "inputs", class = "inputs", fixed = T, draggable = TRUE, top = 75, left = "auto", right = 10, 
                 bottom = "auto", width = 400, height = "auto",
                 
-                h2("WQP Explorer"),
+                h2("AcquaSat Explorer"),
                 
                 splitLayout(cellWidths = c("25%", "75%"),
                   selectInput(inputId = "hucInput",
