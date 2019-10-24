@@ -42,21 +42,21 @@ fluidPage(
   # For whatever reason displaying output.select in this way fixes major bug 
   # when displaying pop-up coverage plot for second time
 
-  #NEB adds an acknowledgement panel
+  #NEB adds an info panel
   # absolutePanel(h4(textOutput("select"))),
   absolutePanel(id = "acknowledgements", class = "acknowledgements", fixed = T, draggable = TRUE, top = 500, left = "auto", right = 10, 
                 bottom = "auto", width = 400, height = "auto",
                 p(strong("Developers:")," Yaov Kargon (yoav.kargon@duke.edu), Tommy Lin (kailai.lin@duke.edu)"),
                 p(strong("Domain and project guidance:")," Nick Bruns (neb8@duke.edu), John Gardner (johngardner87@gmail.com), Jim Heffernan (james.heffernan@duke.edu)"),
-                p(strong("Data Courtesy of Acquasat: "),a("Ross et. al. 2009",href='https://doi.org/10.1029/2019WR024883')),
+                p(strong("Data Courtesy of AcquaSat: "),a("Ross et. al. 2009",href='https://doi.org/10.1029/2019WR024883')),
                 p(strong("Funding:"), a("Duke Data+ program" , href= 'https://bigdata.duke.edu/data')),
                 p(strong("Additional Support:")," Blake Schaefer (Schaeffer.Blake@epa.gov), Jordan Read (jread@usgs.gov)"),
                 tags$br(), 
-                p(strong("**** warning ***"), tags$br()," this app remains in alpha stages. Multiple simultaenous users may impact its functionality.")
+                p(strong("**** warning ***"), tags$br()," this app remains in alpha stages. Multiple simultaneous users may impact its functionality.")
 
                ) ,
     
-  absolutePanel(id = "inputs", class = "inputs", fixed = T, draggable = TRUE, top = 75, left = "auto", right = 10, 
+  absolutePanel(id = "inputs", class = "inputs", fixed = T, draggable = TRUE, top = 200, left = "auto", right = 10, 
                 bottom = "auto", width = 400, height = "auto",
                 
                 h2("AcquaSat Explorer"),
